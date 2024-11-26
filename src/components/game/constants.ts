@@ -22,6 +22,10 @@ export const POWERUPS = [
 	CELL_POWERUP_TURTLE,
 ]
 
+export const PET_OWL = CELL_POWERUP_OWL
+export const PET_TURTLE = CELL_POWERUP_TURTLE
+export type Pet = typeof PET_OWL | typeof PET_TURTLE
+
 export const POWERUP_SPAWN_CHANCE = 0.2
 export const POWERUP_SPAWN_INTERVAL = 10000
 

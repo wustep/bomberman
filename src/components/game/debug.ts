@@ -2,21 +2,19 @@ import {
 	INITIAL_BOMBS_MAX,
 	INITIAL_BOMB_RANGE,
 	INITIAL_SPEED,
-	CELL_POWERUP_OWL,
-	CELL_POWERUP_TURTLE,
+	PET_OWL,
+	PET_TURTLE,
+	Pet,
 } from "./constants"
 
 export const DEBUG = true
 
-export const DEBUG_STARTING_PETS = {
-	P1: CELL_POWERUP_OWL as
-		| typeof CELL_POWERUP_OWL
-		| typeof CELL_POWERUP_TURTLE
-		| null,
-	P2: CELL_POWERUP_TURTLE as
-		| typeof CELL_POWERUP_OWL
-		| typeof CELL_POWERUP_TURTLE
-		| null,
+export const DEBUG_STARTING_PETS: {
+	P1: Pet | null
+	P2: Pet | null
+} = {
+	P1: PET_OWL,
+	P2: PET_TURTLE,
 }
 
 export const DEBUG_STARTING_POWERUPS = {

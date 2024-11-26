@@ -32,6 +32,9 @@ import {
 	EXPLOSION_DURATION,
 	BOMB_DELAY_DURATION,
 	INVULNERABILITY_DURATION,
+	PET_OWL,
+	PET_TURTLE,
+	Pet,
 } from "./constants"
 
 import { DEBUG, DEBUG_STARTING_PETS, DEBUG_STARTING_POWERUPS } from "./debug"
@@ -72,7 +75,7 @@ type Player = {
 	alive: boolean
 	lastMove: number
 	kills: number
-	pet: typeof CELL_POWERUP_OWL | typeof CELL_POWERUP_TURTLE | null
+	pet: Pet | null
 	baseSpeed: number
 	orientation: Orientation
 	invulnerableUntil: number
@@ -253,22 +256,27 @@ export default function Game() {
 
 			if (isPowerUp(targetCell)) {
 				setPlayers((prev) => {
-					const upgrade =
-						targetCell === CELL_POWERUP_SPEED
-							? {
-									speed: prev[player].speed + 0.5,
-									baseSpeed: prev[player].baseSpeed + 0.5,
-							  }
-							: targetCell === CELL_POWERUP_RANGE
-							? { bombRange: prev[player].bombRange + 1 }
-							: targetCell === CELL_POWERUP_BOMB
-							? { maxBombs: prev[player].maxBombs + 1 }
-							: targetCell === CELL_POWERUP_OWL
-							? { pet: CELL_POWERUP_OWL, speed: 2 }
-							: {
-									pet: CELL_POWERUP_TURTLE,
-									speed: 0.8,
-							  }
+					let upgrade = {}
+					switch (targetCell) {
+						case CELL_POWERUP_SPEED:
+							upgrade = {
+								speed: prev[player].speed + 0.5,
+								baseSpeed: prev[player].baseSpeed + 0.5,
+							}
+							break
+						case CELL_POWERUP_RANGE:
+							upgrade = { bombRange: prev[player].bombRange + 1 }
+							break
+						case CELL_POWERUP_BOMB:
+							upgrade = { maxBombs: prev[player].maxBombs + 1 }
+							break
+						case CELL_POWERUP_OWL:
+							upgrade = { pet: PET_OWL, speed: 2 }
+							break
+						case CELL_POWERUP_TURTLE:
+							upgrade = { pet: PET_TURTLE, speed: 0.8 }
+							break
+					}
 
 					return {
 						...prev,
@@ -770,7 +778,7 @@ type PlayerStatsProps = {
 	speed: number
 	bombRange: number
 	kills: number
-	pet: typeof CELL_POWERUP_OWL | typeof CELL_POWERUP_TURTLE | null
+	pet: typeof PET_OWL | typeof PET_TURTLE | null
 }
 
 function PlayerStats({ speed, bombRange, kills, pet }: PlayerStatsProps) {
@@ -779,9 +787,9 @@ function PlayerStats({ speed, bombRange, kills, pet }: PlayerStatsProps) {
 			Speed:{" "}
 			<span
 				className={
-					pet === CELL_POWERUP_OWL
+					pet === PET_OWL
 						? "text-amber-700 font-semibold"
-						: pet === CELL_POWERUP_TURTLE
+						: pet === PET_TURTLE
 						? "text-green-700 font-semibold"
 						: ""
 				}
@@ -910,9 +918,9 @@ export function GameCell({ cell, x, y, players }: GameCellProps) {
 									"text-2xl z-10 relative",
 									// Owl faces right (🦉), turtle faces left (🐢)
 									(players.p1.orientation === "left" &&
-										players.p1.pet === CELL_POWERUP_OWL) ||
+										players.p1.pet === PET_OWL) ||
 										(players.p1.orientation === "right" &&
-											players.p1.pet === CELL_POWERUP_TURTLE)
+											players.p1.pet === PET_TURTLE)
 										? "scale-x-[-1]"
 										: ""
 								)}
@@ -936,9 +944,9 @@ export function GameCell({ cell, x, y, players }: GameCellProps) {
 								className={cn(
 									"text-2xl z-10 relative",
 									(players.p2.orientation === "left" &&
-										players.p2.pet === CELL_POWERUP_OWL) ||
+										players.p2.pet === PET_OWL) ||
 										(players.p2.orientation === "right" &&
-											players.p2.pet === CELL_POWERUP_TURTLE)
+											players.p2.pet === PET_TURTLE)
 										? "scale-x-[-1]"
 										: ""
 								)}
