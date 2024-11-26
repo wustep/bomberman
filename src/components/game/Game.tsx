@@ -431,9 +431,13 @@ export default function Game() {
 						currentTime > playersRef.current.p1.invulnerableUntil
 					) {
 						if (newPlayers.p1.pet) {
-							// Remove pet and reset speed
-							newPlayers.p1.pet = null
-							newPlayers.p1.speed = newPlayers.p1.baseSpeed
+							// Remove pet, reset speed, and add invulnerability
+							newPlayers.p1 = {
+								...newPlayers.p1,
+								pet: null,
+								speed: newPlayers.p1.baseSpeed,
+								invulnerableUntil: currentTime + INVULNERABILITY_DURATION,
+							}
 						} else {
 							newPlayers.p1.alive = false
 							if (player === "p2") {
@@ -449,9 +453,13 @@ export default function Game() {
 						currentTime > playersRef.current.p2.invulnerableUntil
 					) {
 						if (newPlayers.p2.pet) {
-							// Remove pet and reset speed
-							newPlayers.p2.pet = null
-							newPlayers.p2.speed = newPlayers.p2.baseSpeed
+							// Remove pet, reset speed, and add invulnerability
+							newPlayers.p2 = {
+								...newPlayers.p2,
+								pet: null,
+								speed: newPlayers.p2.baseSpeed,
+								invulnerableUntil: currentTime + INVULNERABILITY_DURATION,
+							}
 						} else {
 							newPlayers.p2.alive = false
 							if (player === "p1") {
