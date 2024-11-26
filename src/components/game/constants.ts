@@ -8,7 +8,10 @@ export const CELL_WALL = "🟫"
 export const CELL_EXPLOSION = "🌸"
 export const CELL_BOMB = "💣"
 export const CELL_GRASS = "🟩"
-
+/**
+ * Marker for grass that is breaking. Not displayed in game.
+ */
+export const CELL_GRASS_BREAKING = "❎"
 export const CELL_POWERUP_SPEED = "⚡️"
 export const CELL_POWERUP_RANGE = "💪"
 export const CELL_POWERUP_BOMB = "➕"
@@ -48,3 +51,8 @@ export const EXPLOSION_DURATION = 500
  * Duration of vulnerability after pet dies in ms.
  */
 export const INVULNERABILITY_DURATION = 1500
+
+/**
+ * Duration of time before an explosion triggers another explosion in ms.
+ */
+export const CHAIN_EXPLOSION_DELAY = 50

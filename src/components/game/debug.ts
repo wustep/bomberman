@@ -7,7 +7,7 @@ import {
 	Pet,
 } from "./constants"
 
-export const DEBUG = true
+export const DEBUG = false
 
 export const DEBUG_STARTING_PETS: {
 	P1: Pet | null

@@ -62,11 +62,19 @@ export default {
 					"0%, 100%": { opacity: "1" },
 					"50%": { opacity: "0.3" },
 				},
-				// ... other keyframes
+				explosion: {
+					"0%": { transform: "scale(0.8)", opacity: "1" },
+					"100%": { transform: "scale(1.2)", opacity: "0" },
+				},
+				grassBreak: {
+					"0%": { transform: "scale(1)", opacity: "1" },
+					"100%": { transform: "scale(0.8)", opacity: "0" },
+				},
 			},
 			animation: {
 				flash: "flash 400ms ease-in-out infinite",
-				// ... other animations
+				explosion: "explosion 256ms ease-out forwards",
+				grassBreak: "grassBreak 200ms ease-out forwards",
 			},
 		},
 	},

@@ -35,6 +35,8 @@ import {
 	PET_OWL,
 	PET_TURTLE,
 	Pet,
+	CHAIN_EXPLOSION_DELAY,
+	CELL_GRASS_BREAKING,
 } from "./constants"
 
 import { DEBUG, DEBUG_STARTING_PETS, DEBUG_STARTING_POWERUPS } from "./debug"
@@ -242,7 +244,8 @@ export default function Game() {
 			if (
 				targetCell === CELL_WALL ||
 				targetCell === CELL_BOMB ||
-				targetCell === CELL_GRASS
+				targetCell === CELL_GRASS ||
+				targetCell === CELL_GRASS_BREAKING
 			) {
 				setPlayers((prev) => ({
 					...prev,
@@ -400,15 +403,23 @@ export default function Game() {
 								}
 							}
 
-							// Handle grass - if it's grass, stop the explosion in this direction
+							// Handle grass - if it's grass, start break animation
 							if (newGrid[newY][newX] === CELL_GRASS) {
-								newGrid[newY][newX] = CELL_EXPLOSION
-								explosionCoords.push([newX, newY])
-								// Queue this location for potential powerup spawn
-								if (Math.random() < POWERUP_SPAWN_GRASS_CHANCE) {
-									// 30% chance for powerup
+								newGrid[newY][newX] = CELL_GRASS_BREAKING
+								// Queue this location for potential powerup spawn and clearing
+								if (Math.random() <= POWERUP_SPAWN_GRASS_CHANCE) {
 									powerupSpawns.push({ x: newX, y: newY })
 								}
+								// Schedule the actual clearing
+								setTimeout(() => {
+									setGrid((prev) => {
+										const newGrid = [...prev]
+										if (newGrid[newY][newX] === CELL_GRASS_BREAKING) {
+											newGrid[newY][newX] = CELL_EMPTY
+										}
+										return newGrid
+									})
+								}, 200) // Match this with animation duration
 								break // Stop the explosion in this direction
 							}
 
@@ -481,10 +492,10 @@ export default function Game() {
 				}
 
 				// Trigger chain explosions with a small delay
-				triggeredBombs.forEach(({ player, bomb }, index) => {
+				triggeredBombs.forEach(({ player, bomb }) => {
 					setTimeout(() => {
 						explodeBomb(player, bomb)
-					}, 50 * (index + 1))
+					}, CHAIN_EXPLOSION_DELAY)
 				})
 
 				// Spawn powerups after explosion clears
@@ -646,12 +657,12 @@ export default function Game() {
 			.fill(null)
 			.map(() => Array(GRID_SIZE).fill(CELL_EMPTY))
 
+		// Initialize walls and grass
 		for (let i = 0; i < GRID_SIZE; i++) {
 			for (let j = 0; j < GRID_SIZE; j++) {
 				if (i % 2 === 0 && j % 2 === 0) {
 					newGrid[i][j] = CELL_WALL
 				} else if (
-					// Don't place grass in player starting positions and adjacent cells
 					!(
 						(i === 1 && j === 1) ||
 						(i === 1 && j === 2) ||
@@ -667,10 +678,13 @@ export default function Game() {
 			}
 		}
 
+		// Clear starting positions
 		newGrid[1][1] = CELL_EMPTY
 		newGrid[GRID_SIZE - 2][GRID_SIZE - 2] = CELL_EMPTY
 
 		setGrid(newGrid)
+		setExplosions([]) // Clear all explosions
+		setPendingPowerups([]) // Clear pending powerups
 		setPlayers((players) => ({
 			p1: {
 				x: 1,
@@ -711,8 +725,6 @@ export default function Game() {
 				invulnerableUntil: 0,
 			},
 		}))
-		setExplosions([])
-		setPendingPowerups([])
 		setGameOver(false)
 		setShowAlert(false)
 	}, [setGrid, setPlayers])
@@ -873,9 +885,27 @@ export function GameCell({ cell, x, y, players }: GameCellProps) {
 			key={`${x}-${y}`}
 			className="w-8 h-8 flex items-center justify-center relative"
 		>
-			<div className="absolute inset-0 flex items-center justify-center text-3xl">
-				{cell === CELL_WALL ? CELL_WALL : CELL_EMPTY}
+			<div
+				className={cn(
+					"absolute inset-0 flex items-center justify-center text-3xl"
+				)}
+			>
+				{cell === CELL_WALL
+					? CELL_WALL
+					: cell === CELL_GRASS
+					? CELL_GRASS
+					: CELL_EMPTY}
 			</div>
+			{cell === CELL_GRASS_BREAKING && (
+				<div
+					className={cn(
+						"absolute inset-0 flex items-center justify-center text-3xl",
+						cell === CELL_GRASS_BREAKING && "animate-grassBreak"
+					)}
+				>
+					{CELL_GRASS}
+				</div>
+			)}
 			{cell === CELL_BOMB && (
 				<div
 					className="absolute text-3xl z-0 transition-all duration-75"
@@ -963,7 +993,11 @@ export function GameCell({ cell, x, y, players }: GameCellProps) {
 							</span>
 						)}
 					</div>
-				) : cell !== CELL_BOMB && cell !== CELL_WALL && cell !== CELL_EMPTY ? (
+				) : cell !== CELL_BOMB &&
+				  cell !== CELL_WALL &&
+				  cell !== CELL_EMPTY &&
+				  cell !== CELL_GRASS &&
+				  cell !== CELL_GRASS_BREAKING ? (
 					cell
 				) : null}
 			</div>
