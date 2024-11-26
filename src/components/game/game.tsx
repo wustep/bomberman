@@ -138,6 +138,7 @@ export default function Game() {
 	)
 
 	const [gameOver, setGameOver] = useState(false)
+	const [tick, setTick] = useState(0)
 
 	// Key state management
 	useEffect(() => {
@@ -437,8 +438,10 @@ export default function Game() {
 			})
 
 			// Handle bomb placement
-			if (keys["q"]) placeBomb("p1")
+			if (keys["e"]) placeBomb("p1")
 			if (keys["rightshift"]) placeBomb("p2")
+
+			setTick((t) => t + 1)
 		}, 16) // 60fps target
 
 		return () => clearInterval(gameLoop)
@@ -504,10 +507,8 @@ export default function Game() {
 	}, [resetGame])
 
 	// Spawn powerups
-	// TODO: make this spawn during a frame
 	useEffect(() => {
 		const spawnPowerup = setInterval(() => {
-			console.log("spawn powerup attempt")
 			if (Math.random() <= POWERUP_SPAWN_CHANCE) {
 				const x = Math.floor(Math.random() * GRID_SIZE)
 				const y = Math.floor(Math.random() * GRID_SIZE)
@@ -521,6 +522,7 @@ export default function Game() {
 					return newGrid
 				})
 			}
+			// TODO: make this spawn during a frame instead...
 		}, POWERUP_SPAWN_INTERVAL)
 		return () => clearInterval(spawnPowerup)
 	}, [setGrid])
@@ -530,7 +532,7 @@ export default function Game() {
 			<div className="flex justify-between mb-4">
 				<div className="space-y-2">
 					<Badge variant={players.p1.alive ? "default" : "destructive"}>
-						Player 1: WASD + Q (bomb)
+						Player 1: WASD + E (bomb)
 					</Badge>
 					<div className="text-sm">
 						<PlayerStats {...players.p1} />
