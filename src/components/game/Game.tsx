@@ -705,18 +705,18 @@ export default function Game() {
 				x: 1,
 				y: 1,
 				bombs: [],
-				maxBombs: DEBUG
+				maxBombs: debugMode
 					? DEBUG_STARTING_POWERUPS.P1.maxBombs
 					: INITIAL_BOMBS_MAX,
-				bombRange: DEBUG
+				bombRange: debugMode
 					? DEBUG_STARTING_POWERUPS.P1.bombRange
 					: INITIAL_BOMB_RANGE,
-				speed: DEBUG ? DEBUG_STARTING_POWERUPS.P1.speed : INITIAL_SPEED,
+				speed: debugMode ? DEBUG_STARTING_POWERUPS.P1.speed : INITIAL_SPEED,
 				alive: true,
 				lastMove: 0,
 				kills: players.p1.kills,
-				pet: DEBUG ? DEBUG_STARTING_PETS.P1 : null,
-				baseSpeed: DEBUG ? DEBUG_STARTING_POWERUPS.P1.speed : INITIAL_SPEED,
+				pet: debugMode ? DEBUG_STARTING_PETS.P1 : null,
+				baseSpeed: debugMode ? DEBUG_STARTING_POWERUPS.P1.speed : INITIAL_SPEED,
 				orientation: "right",
 				invulnerableUntil: 0,
 			},
@@ -724,25 +724,25 @@ export default function Game() {
 				x: GRID_SIZE - 2,
 				y: GRID_SIZE - 2,
 				bombs: [],
-				maxBombs: DEBUG
+				maxBombs: debugMode
 					? DEBUG_STARTING_POWERUPS.P2.maxBombs
 					: INITIAL_BOMBS_MAX,
-				bombRange: DEBUG
+				bombRange: debugMode
 					? DEBUG_STARTING_POWERUPS.P2.bombRange
 					: INITIAL_BOMB_RANGE,
-				speed: DEBUG ? DEBUG_STARTING_POWERUPS.P2.speed : INITIAL_SPEED,
+				speed: debugMode ? DEBUG_STARTING_POWERUPS.P2.speed : INITIAL_SPEED,
 				alive: true,
 				lastMove: 0,
 				kills: players.p2.kills,
-				pet: DEBUG ? DEBUG_STARTING_PETS.P2 : null,
-				baseSpeed: DEBUG ? DEBUG_STARTING_POWERUPS.P2.speed : INITIAL_SPEED,
+				pet: debugMode ? DEBUG_STARTING_PETS.P2 : null,
+				baseSpeed: debugMode ? DEBUG_STARTING_POWERUPS.P2.speed : INITIAL_SPEED,
 				orientation: "left",
 				invulnerableUntil: 0,
 			},
 		}))
 		setGameOver(false)
 		setShowAlert(false)
-	}, [setGrid, setPlayers])
+	}, [setGrid, setPlayers, debugMode])
 
 	useEffect(() => {
 		resetGame()
