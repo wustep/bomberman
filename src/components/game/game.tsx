@@ -289,6 +289,9 @@ export default function Game() {
 			})
 
 			const explodeBomb = (player: "p1" | "p2", bomb: Bomb) => {
+				// Early return if game is already over
+				if (gameOver) return
+
 				const { x, y, range } = bomb
 				const explosionCoords: Array<[number, number]> = []
 				const triggeredBombs: { player: "p1" | "p2"; bomb: Bomb }[] = []
@@ -399,6 +402,8 @@ export default function Game() {
 				if (someoneKilled) {
 					setPlayers(newPlayers)
 					setGameOver(true)
+					// Clear any pending chain explosions by not triggering them
+					return
 				}
 
 				// Trigger chain explosions with a small delay
@@ -431,7 +436,7 @@ export default function Game() {
 				explodeBomb(player, newBomb)
 			}, 2000)
 		},
-		[setGrid, setPlayers, setGameOver]
+		[setPlayers, setGrid, gameOver]
 	)
 
 	// Game loop for continuous movement
