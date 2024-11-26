@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useCallback, useRef } from "react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -48,12 +48,27 @@ type Bomb = {
 type PowerUp = "⚡️" | "💪"
 
 export default function Game() {
-	const [grid, setGrid] = useState<(string | PowerUp)[][]>(
+	const [grid, _setGrid] = useState<(string | PowerUp)[][]>(
 		Array(GRID_SIZE)
 			.fill(null)
 			.map(() => Array(GRID_SIZE).fill(CELL_EMPTY))
 	)
-	const [players, setPlayers] = useState<{
+	const gridRef = useRef<(string | PowerUp)[][]>(grid)
+	const setGrid = useCallback(
+		(
+			newGrid:
+				| (string | PowerUp)[][]
+				| ((prev: (string | PowerUp)[][]) => (string | PowerUp)[][])
+		) => {
+			const updatedGrid =
+				typeof newGrid === "function" ? newGrid(gridRef.current) : newGrid
+			_setGrid(updatedGrid)
+			gridRef.current = updatedGrid
+		},
+		[]
+	)
+
+	const [players, _setPlayers] = useState<{
 		p1: Player
 		p2: Player
 	}>({
@@ -78,17 +93,26 @@ export default function Game() {
 			lastMove: 0,
 		},
 	})
+	const playersRef = useRef<{ p1: Player; p2: Player }>(players)
+	const setPlayers = useCallback(
+		(
+			newPlayers:
+				| { p1: Player; p2: Player }
+				| ((prev: { p1: Player; p2: Player }) => { p1: Player; p2: Player })
+		) => {
+			const updatedPlayers =
+				typeof newPlayers === "function"
+					? newPlayers(playersRef.current)
+					: newPlayers
+			_setPlayers(updatedPlayers)
+			playersRef.current = updatedPlayers
+		},
+		[]
+	)
+
 	const [gameOver, setGameOver] = useState(false)
 
-	const isPowerUp = (cell: string | PowerUp): cell is PowerUp => {
-		return POWERUPS.includes(cell)
-	}
-
-	useEffect(() => {
-		resetGame()
-	}, [])
-
-	const resetGame = () => {
+	const resetGame = useCallback(() => {
 		const newGrid = Array(GRID_SIZE)
 			.fill(null)
 			.map(() => Array(GRID_SIZE).fill(CELL_EMPTY))
@@ -128,7 +152,220 @@ export default function Game() {
 			},
 		})
 		setGameOver(false)
-	}
+	}, [])
+
+	useEffect(() => {
+		resetGame()
+	}, [resetGame])
+
+	const movePlayer = useCallback(
+		(player: "p1" | "p2", direction: string) => {
+			const currentTime = Date.now()
+			if (!players[player].alive) return
+
+			const moveDelay = 200 / players[player].speed
+			if (currentTime - players[player].lastMove < moveDelay) return
+
+			const { x, y } = players[player]
+			let newX = x
+			let newY = y
+
+			switch (direction) {
+				case "w":
+					newY = Math.max(0, y - 1)
+					break
+				case "s":
+					newY = Math.min(GRID_SIZE - 1, y + 1)
+					break
+				case "a":
+					newX = Math.max(0, x - 1)
+					break
+				case "d":
+					newX = Math.min(GRID_SIZE - 1, x + 1)
+					break
+			}
+
+			// Collision handling
+			const otherPlayer = player === "p1" ? "p2" : "p1"
+			if (players[otherPlayer].x === newX && players[otherPlayer].y === newY)
+				return
+
+			const targetCell = gridRef.current[newY][newX]
+			if (targetCell === CELL_WALL || targetCell === CELL_BOMB) return
+
+			if (isPowerUp(targetCell)) {
+				setPlayers((prev) => ({
+					...prev,
+					[player]: {
+						...prev[player],
+						...(targetCell === CELL_POWERUP_SPEED
+							? { speed: prev[player].speed + 0.5 }
+							: targetCell === CELL_POWERUP_RANGE
+							? { bombRange: prev[player].bombRange + 1 }
+							: {}),
+					},
+				}))
+			}
+
+			setGrid((prev) => {
+				const newGrid = [...prev]
+				if (isPowerUp(targetCell)) {
+					newGrid[newY][newX] = CELL_EMPTY
+				}
+				return newGrid
+			})
+
+			setPlayers((prev) => ({
+				...prev,
+				[player]: {
+					...prev[player],
+					x: newX,
+					y: newY,
+					lastMove: currentTime,
+				},
+			}))
+		},
+		[gridRef, players]
+	)
+
+	const checkPlayerDeath = useCallback(
+		(explosionCoords: Array<[number, number]>) => {
+			const newPlayers = { ...players }
+			let someoneKilled = false
+
+			explosionCoords.forEach(([x, y]) => {
+				if (players.p1.x === x && players.p1.y === y && players.p1.alive) {
+					newPlayers.p1.alive = false
+					someoneKilled = true
+				}
+				if (players.p2.x === x && players.p2.y === y && players.p2.alive) {
+					newPlayers.p2.alive = false
+					someoneKilled = true
+				}
+			})
+
+			if (someoneKilled) {
+				setPlayers(newPlayers)
+				if (!newPlayers.p1.alive || !newPlayers.p2.alive) {
+					setGameOver(true)
+				}
+			}
+		},
+		[players]
+	)
+
+	const placeBomb = useCallback(
+		(player: "p1" | "p2") => {
+			const { x, y, bombs, maxBombs, bombRange, alive } = players[player]
+			if (bombs.length >= maxBombs || !alive) return
+
+			if (gridRef.current[y][x] === CELL_BOMB) return
+
+			const newBomb = { x, y, timer: 3, range: bombRange }
+			setPlayers((prev) => ({
+				...prev,
+				[player]: { ...prev[player], bombs: [...prev[player].bombs, newBomb] },
+			}))
+
+			setGrid((prev) => {
+				const newGrid = [...prev]
+				newGrid[y][x] = CELL_BOMB
+				return newGrid
+			})
+
+			const explodeBomb = (player: "p1" | "p2", bomb: Bomb) => {
+				const { x, y, range } = bomb
+				const explosionCoords: Array<[number, number]> = []
+
+				setPlayers((prev) => ({
+					...prev,
+					[player]: {
+						...prev[player],
+						bombs: prev[player].bombs.filter((b) => b !== bomb),
+					},
+				}))
+
+				const directions = [
+					[0, 1],
+					[0, -1],
+					[1, 0],
+					[-1, 0],
+				]
+
+				setGrid((prev) => {
+					const newGrid = [...prev]
+
+					if (newGrid[y][x] !== CELL_WALL) {
+						newGrid[y][x] = CELL_EXPLOSION
+						explosionCoords.push([x, y])
+					}
+
+					directions.forEach(([dx, dy]) => {
+						for (let i = 1; i <= range; i++) {
+							const newX = x + dx * i
+							const newY = y + dy * i
+
+							if (
+								newX < 0 ||
+								newX >= GRID_SIZE ||
+								newY < 0 ||
+								newY >= GRID_SIZE ||
+								newGrid[newY][newX] === CELL_WALL
+							) {
+								break
+							}
+
+							newGrid[newY][newX] = CELL_EXPLOSION
+							explosionCoords.push([newX, newY])
+						}
+					})
+
+					return newGrid
+				})
+
+				const newPlayers = { ...playersRef.current }
+				let someoneKilled = false
+
+				explosionCoords.forEach(([ex, ey]) => {
+					if (
+						playersRef.current.p1.x === ex &&
+						playersRef.current.p1.y === ey &&
+						playersRef.current.p1.alive
+					) {
+						newPlayers.p1.alive = false
+						someoneKilled = true
+					}
+					if (
+						playersRef.current.p2.x === ex &&
+						playersRef.current.p2.y === ey &&
+						playersRef.current.p2.alive
+					) {
+						newPlayers.p2.alive = false
+						someoneKilled = true
+					}
+				})
+
+				if (someoneKilled) {
+					setPlayers(newPlayers)
+					setGameOver(true)
+				}
+
+				setTimeout(() => {
+					setGrid((prev) => {
+						const clearedGrid = prev.map((row, y) =>
+							row.map((cell) => (cell === CELL_EXPLOSION ? CELL_EMPTY : cell))
+						)
+						return clearedGrid
+					})
+				}, 300)
+			}
+
+			setTimeout(() => {
+				explodeBomb(player, newBomb)
+			}, 2000)
+		},
+		[players]
+	)
 
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
@@ -158,92 +395,7 @@ export default function Game() {
 
 		window.addEventListener("keydown", handleKeyDown)
 		return () => window.removeEventListener("keydown", handleKeyDown)
-	}, [players, grid, gameOver])
-
-	const movePlayer = (player: "p1" | "p2", direction: string) => {
-		const currentTime = Date.now()
-		if (!players[player].alive) return
-
-		const moveDelay = 200 / players[player].speed
-		if (currentTime - players[player].lastMove < moveDelay) return
-
-		const { x, y } = players[player]
-		let newX = x
-		let newY = y
-
-		switch (direction) {
-			case "w":
-				newY = Math.max(0, y - 1)
-				break
-			case "s":
-				newY = Math.min(GRID_SIZE - 1, y + 1)
-				break
-			case "a":
-				newX = Math.max(0, x - 1)
-				break
-			case "d":
-				newX = Math.min(GRID_SIZE - 1, x + 1)
-				break
-		}
-
-		const targetCell = grid[newY][newX]
-		if (targetCell === CELL_WALL || targetCell === CELL_BOMB) return
-
-		if (isPowerUp(targetCell)) {
-			setPlayers((prev) => ({
-				...prev,
-				[player]: {
-					...prev[player],
-					...(targetCell === CELL_POWERUP_SPEED
-						? { speed: prev[player].speed + 0.5 }
-						: targetCell === CELL_POWERUP_RANGE
-						? { bombRange: prev[player].bombRange + 1 }
-						: {}),
-				},
-			}))
-		}
-
-		setGrid((prev) => {
-			const newGrid = [...prev]
-			if (isPowerUp(targetCell)) {
-				newGrid[newY][newX] = CELL_EMPTY
-			}
-			return newGrid
-		})
-
-		setPlayers((prev) => ({
-			...prev,
-			[player]: {
-				...prev[player],
-				x: newX,
-				y: newY,
-				lastMove: currentTime,
-			},
-		}))
-	}
-
-	const placeBomb = (player: "p1" | "p2") => {
-		const { x, y, bombs, maxBombs, bombRange, alive } = players[player]
-		if (bombs.length >= maxBombs || !alive) return
-
-		if (grid[y][x] === CELL_BOMB) return
-
-		const newBomb = { x, y, timer: 3, range: bombRange }
-		setPlayers((prev) => ({
-			...prev,
-			[player]: { ...prev[player], bombs: [...prev[player].bombs, newBomb] },
-		}))
-
-		setGrid((prev) => {
-			const newGrid = [...prev]
-			newGrid[y][x] = CELL_BOMB
-			return newGrid
-		})
-
-		setTimeout(() => {
-			explodeBomb(player, newBomb)
-		}, 2000)
-	}
+	}, [gameOver, movePlayer, placeBomb])
 
 	const trySpawnPowerUp = (x: number, y: number) => {
 		setGrid((prev) => {
@@ -253,89 +405,6 @@ export default function Game() {
 			}
 			return newGrid
 		})
-	}
-
-	const checkPlayerDeath = (explosionCoords: Array<[number, number]>) => {
-		const newPlayers = { ...players }
-		let someoneKilled = false
-
-		explosionCoords.forEach(([x, y]) => {
-			if (players.p1.x === x && players.p1.y === y && players.p1.alive) {
-				newPlayers.p1.alive = false
-				someoneKilled = true
-			}
-			if (players.p2.x === x && players.p2.y === y && players.p2.alive) {
-				newPlayers.p2.alive = false
-				someoneKilled = true
-			}
-		})
-
-		if (someoneKilled) {
-			setPlayers(newPlayers)
-			if (!newPlayers.p1.alive || !newPlayers.p2.alive) {
-				setGameOver(true)
-			}
-		}
-	}
-
-	const explodeBomb = (player: "p1" | "p2", bomb: Bomb) => {
-		const { x, y, range } = bomb
-		const explosionCoords: Array<[number, number]> = []
-
-		setPlayers((prev) => ({
-			...prev,
-			[player]: {
-				...prev[player],
-				bombs: prev[player].bombs.filter((b) => b !== bomb),
-			},
-		}))
-
-		const directions = [
-			[0, 1],
-			[0, -1],
-			[1, 0],
-			[-1, 0],
-		]
-
-		setGrid((prev) => {
-			const newGrid = [...prev]
-
-			if (newGrid[y][x] !== CELL_WALL) {
-				newGrid[y][x] = CELL_EXPLOSION
-				explosionCoords.push([x, y])
-			}
-
-			directions.forEach(([dx, dy]) => {
-				for (let i = 1; i <= range; i++) {
-					const newX = x + dx * i
-					const newY = y + dy * i
-
-					if (newX < 0 || newX >= GRID_SIZE || newY < 0 || newY >= GRID_SIZE)
-						break
-					if (newGrid[newY][newX] === CELL_WALL) break
-
-					newGrid[newY][newX] = CELL_EXPLOSION
-					explosionCoords.push([newX, newY])
-				}
-			})
-
-			return newGrid
-		})
-		checkPlayerDeath(explosionCoords)
-
-		setTimeout(() => {
-			setGrid((prev) => {
-				const clearedGrid = prev.map((row, y) =>
-					row.map((cell, x) => {
-						if (cell === CELL_EXPLOSION) {
-							return CELL_EMPTY
-						}
-						return cell
-					})
-				)
-				return clearedGrid
-			})
-		}, 300)
 	}
 
 	useEffect(() => {
@@ -349,19 +418,6 @@ export default function Game() {
 		}, POWERUP_SPAWN_INTERVAL)
 	}, [])
 
-	const getWinnerText = () => {
-		if (!players.p1.alive && !players.p2.alive) return "It's a draw!"
-		if (!players.p1.alive) return "Player 2 wins! 🎉"
-		if (!players.p2.alive) return "Player 1 wins! 🎉"
-		return ""
-	}
-
-	const getPlayerStats = (player: "p1" | "p2") => {
-		return `Speed: ${players[player].speed.toFixed(1)}x | Bomb Range: ${
-			players[player].bombRange
-		}x1`
-	}
-
 	return (
 		<div className="space-y-4">
 			<div className="flex justify-between mb-4">
@@ -369,13 +425,17 @@ export default function Game() {
 					<Badge variant={players.p1.alive ? "default" : "destructive"}>
 						Player 1: WASD + Q (bomb)
 					</Badge>
-					<div className="text-sm">{getPlayerStats("p1")}</div>
+					<div className="text-sm">
+						<PlayerStats {...players.p1} />
+					</div>
 				</div>
 				<div className="space-y-2">
 					<Badge variant={players.p2.alive ? "default" : "destructive"}>
 						Player 2: Arrows + Right Shift (bomb)
 					</Badge>
-					<div className="text-sm text-right">{getPlayerStats("p2")}</div>
+					<div className="text-sm text-right">
+						<PlayerStats {...players.p2} />
+					</div>
 				</div>
 			</div>
 
@@ -389,9 +449,9 @@ export default function Game() {
 									className="w-8 h-8 flex items-center justify-center relative"
 								>
 									{cell === CELL_BOMB && (
-										<div className="absolute text-xl z-0">💣</div>
+										<div className="absolute text-3xl z-0">💣</div>
 									)}
-									<div className="z-10">
+									<div className="z-10 text-2xl">
 										{players.p1.x === x && players.p1.y === y
 											? players.p1.alive
 												? PLAYER_1
@@ -414,11 +474,36 @@ export default function Game() {
 			{gameOver && (
 				<Alert>
 					<AlertDescription className="flex items-center justify-between">
-						{getWinnerText()}
+						<WinnerText p1Alive={players.p1.alive} p2Alive={players.p2.alive} />
 						<Button onClick={resetGame}>Play Again</Button>
 					</AlertDescription>
 				</Alert>
 			)}
 		</div>
 	)
+}
+
+const isPowerUp = (cell: string | PowerUp): cell is PowerUp => {
+	return POWERUPS.includes(cell)
+}
+
+type WinnerTextProps = {
+	p1Alive: boolean
+	p2Alive: boolean
+}
+
+function WinnerText({ p1Alive, p2Alive }: WinnerTextProps) {
+	if (!p1Alive && !p2Alive) return "It's a draw!"
+	if (!p1Alive) return "Player 2 wins! 🎉"
+	if (!p2Alive) return "Player 1 wins! 🎉"
+	return ""
+}
+
+type PlayerStatsProps = {
+	speed: number
+	bombRange: number
+}
+
+function PlayerStats({ speed, bombRange }: PlayerStatsProps) {
+	return `Speed: ${speed.toFixed(1)}x | Bomb Range: ${bombRange}x1`
 }
