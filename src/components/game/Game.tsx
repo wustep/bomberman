@@ -720,23 +720,14 @@ const getRandomPowerup = () => {
 	]
 	return otherPowerups[Math.floor(Math.random() * otherPowerups.length)]
 }
+
 type GameCellProps = {
 	cell: string
 	x: number
 	y: number
 	players: {
-		p1: {
-			x: number
-			y: number
-			alive: boolean
-			hasOwl: boolean
-		}
-		p2: {
-			x: number
-			y: number
-			alive: boolean
-			hasOwl: boolean
-		}
+		p1: Player
+		p2: Player
 	}
 }
 
