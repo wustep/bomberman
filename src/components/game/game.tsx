@@ -64,6 +64,7 @@ type Player = {
 	speed: number
 	alive: boolean
 	lastMove: number
+	kills: number
 }
 
 type Bomb = {
@@ -75,6 +76,17 @@ type Bomb = {
 }
 
 type PowerUp = "⚡️" | "💪" | "➕"
+
+type Explosion = {
+	coords: [number, number][]
+	clearTime: number
+}
+
+type PowerupSpawn = {
+	x: number
+	y: number
+	spawnTime: number
+}
 
 export default function Game() {
 	const [keys, setKeys] = useState<KeyState>({})
@@ -108,6 +120,7 @@ export default function Game() {
 			speed: INITIAL_SPEED,
 			alive: true,
 			lastMove: 0,
+			kills: 0,
 		},
 		p2: {
 			x: GRID_SIZE - 2,
@@ -118,6 +131,7 @@ export default function Game() {
 			speed: INITIAL_SPEED,
 			alive: true,
 			lastMove: 0,
+			kills: 0,
 		},
 	})
 	const playersRef = useRef<{ p1: Player; p2: Player }>(players)
@@ -139,6 +153,8 @@ export default function Game() {
 
 	const [gameOver, setGameOver] = useState(false)
 	const [tick, setTick] = useState(0)
+	const [explosions, setExplosions] = useState<Explosion[]>([])
+	const [pendingPowerups, setPendingPowerups] = useState<PowerupSpawn[]>([])
 
 	// Key state management
 	useEffect(() => {
@@ -362,6 +378,9 @@ export default function Game() {
 						playersRef.current.p1.alive
 					) {
 						newPlayers.p1.alive = false
+						if (player === "p2") {
+							newPlayers.p2.kills++
+						}
 						someoneKilled = true
 					}
 					if (
@@ -370,6 +389,9 @@ export default function Game() {
 						playersRef.current.p2.alive
 					) {
 						newPlayers.p2.alive = false
+						if (player === "p1") {
+							newPlayers.p1.kills++
+						}
 						someoneKilled = true
 					}
 				})
@@ -383,32 +405,26 @@ export default function Game() {
 				triggeredBombs.forEach(({ player, bomb }, index) => {
 					setTimeout(() => {
 						explodeBomb(player, bomb)
-					}, 100 * (index + 1))
+					}, 50 * (index + 1))
 				})
 
 				// Spawn powerups after explosion clears
-				setTimeout(() => {
-					if (powerupSpawns.length > 0) {
-						setGrid((prev) => {
-							const newGrid = [...prev]
-							powerupSpawns.forEach(({ x, y }) => {
-								newGrid[y][x] =
-									POWERUPS[Math.floor(Math.random() * POWERUPS.length)]
-							})
-							return newGrid
-						})
-					}
-				}, 300)
+				const clearTime = Date.now() + 256
+				setExplosions((prev) => [
+					...prev,
+					{ coords: explosionCoords, clearTime },
+				])
 
-				// Clear explosions
-				setTimeout(() => {
-					setGrid((prev) => {
-						const clearedGrid = prev.map((row) =>
-							row.map((cell) => (cell === CELL_EXPLOSION ? CELL_EMPTY : cell))
-						)
-						return clearedGrid
-					})
-				}, 300)
+				// Queue powerup spawns
+				if (powerupSpawns.length > 0) {
+					setPendingPowerups((prev) => [
+						...prev,
+						...powerupSpawns.map((spawn) => ({
+							...spawn,
+							spawnTime: clearTime,
+						})),
+					])
+				}
 			}
 
 			setTimeout(() => {
@@ -441,11 +457,51 @@ export default function Game() {
 			if (keys["e"]) placeBomb("p1")
 			if (keys["rightshift"]) placeBomb("p2")
 
+			// Handle explosions and powerups
+			const currentTime = Date.now()
+
+			// Clear expired explosions
+			setExplosions((prev) => {
+				const expired = prev.filter((e) => currentTime >= e.clearTime)
+				if (expired.length > 0) {
+					setGrid((grid) => {
+						const newGrid = [...grid]
+						expired.forEach((explosion) => {
+							explosion.coords.forEach(([x, y]) => {
+								if (newGrid[y][x] === CELL_EXPLOSION) {
+									newGrid[y][x] = CELL_EMPTY
+								}
+							})
+						})
+						return newGrid
+					})
+				}
+				return prev.filter((e) => currentTime < e.clearTime)
+			})
+
+			// Handle pending powerup spawns
+			setPendingPowerups((prev) => {
+				const readyToSpawn = prev.filter((p) => currentTime >= p.spawnTime)
+				if (readyToSpawn.length > 0) {
+					setGrid((grid) => {
+						const newGrid = [...grid]
+						readyToSpawn.forEach(({ x, y }) => {
+							if (newGrid[y][x] === CELL_EMPTY) {
+								newGrid[y][x] =
+									POWERUPS[Math.floor(Math.random() * POWERUPS.length)]
+							}
+						})
+						return newGrid
+					})
+				}
+				return prev.filter((p) => currentTime < p.spawnTime)
+			})
+
 			setTick((t) => t + 1)
-		}, 16) // 60fps target
+		}, 16)
 
 		return () => clearInterval(gameLoop)
-	}, [keys, gameOver, placeBomb, movePlayer])
+	}, [keys, gameOver, placeBomb, movePlayer, setGrid])
 
 	const resetGame = useCallback(() => {
 		const newGrid = Array(GRID_SIZE)
@@ -477,7 +533,7 @@ export default function Game() {
 		newGrid[GRID_SIZE - 2][GRID_SIZE - 2] = CELL_EMPTY
 
 		setGrid(newGrid)
-		setPlayers({
+		setPlayers((players) => ({
 			p1: {
 				x: 1,
 				y: 1,
@@ -487,6 +543,7 @@ export default function Game() {
 				speed: INITIAL_SPEED,
 				alive: true,
 				lastMove: 0,
+				kills: players.p1.kills,
 			},
 			p2: {
 				x: GRID_SIZE - 2,
@@ -497,8 +554,9 @@ export default function Game() {
 				speed: INITIAL_SPEED,
 				alive: true,
 				lastMove: 0,
+				kills: players.p2.kills,
 			},
-		})
+		}))
 		setGameOver(false)
 	}, [setGrid, setPlayers])
 
@@ -604,10 +662,13 @@ function WinnerText({ p1Alive, p2Alive }: WinnerTextProps) {
 type PlayerStatsProps = {
 	speed: number
 	bombRange: number
+	kills: number
 }
 
-function PlayerStats({ speed, bombRange }: PlayerStatsProps) {
-	return `Speed: ${speed.toFixed(1)}x | Bomb Range: ${bombRange}x1`
+function PlayerStats({ speed, bombRange, kills }: PlayerStatsProps) {
+	return `Speed: ${speed.toFixed(
+		1
+	)}x | Bomb Range: ${bombRange}x1 | Kills: ${kills}`
 }
 
 type GameGridProps = {
