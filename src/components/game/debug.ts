@@ -24,12 +24,10 @@ export const DEBUG_STARTING_POWERUPS = {
 		speed: INITIAL_SPEED + 1,
 		bombRange: INITIAL_BOMB_RANGE + 2,
 		maxBombs: INITIAL_BOMBS_MAX + 1,
-		pet: DEBUG_STARTING_PETS.P1,
 	},
 	P2: {
 		speed: INITIAL_SPEED + 1,
 		bombRange: INITIAL_BOMB_RANGE + 1,
 		maxBombs: INITIAL_BOMBS_MAX + 2,
-		pet: DEBUG_STARTING_PETS.P2,
 	},
 }
