@@ -29,6 +29,8 @@ import {
 	PLAYER_DEAD,
 	GRASS_SPAWN_CHANCE,
 	POWERUP_SPAWN_PET_CHANCE,
+	EXPLOSION_DURATION,
+	BOMB_DELAY_DURATION,
 } from "./constants"
 
 type KeyState = {
@@ -461,7 +463,7 @@ export default function Game() {
 				})
 
 				// Spawn powerups after explosion clears
-				const clearTime = Date.now() + 256
+				const clearTime = Date.now() + EXPLOSION_DURATION
 				setExplosions((prev) => [
 					...prev,
 					{ coords: explosionCoords, clearTime },
@@ -481,7 +483,7 @@ export default function Game() {
 
 			setTimeout(() => {
 				explodeBomb(player, newBomb)
-			}, 2000)
+			}, BOMB_DELAY_DURATION)
 		},
 		[setPlayers, setGrid, gameOver]
 	)
@@ -512,8 +514,62 @@ export default function Game() {
 			// Handle explosions and powerups
 			const currentTime = Date.now()
 
-			// Clear expired explosions
+			// Check for players in explosions
 			setExplosions((prev) => {
+				prev.forEach((explosion) => {
+					explosion.coords.forEach(([ex, ey]) => {
+						// Check Player 1
+						if (
+							playersRef.current.p1.x === ex &&
+							playersRef.current.p1.y === ey &&
+							playersRef.current.p1.alive
+						) {
+							if (playersRef.current.p1.pet) {
+								setPlayers((prev) => ({
+									...prev,
+									p1: {
+										...prev.p1,
+										pet: null,
+										speed: prev.p1.baseSpeed,
+									},
+								}))
+							} else {
+								setPlayers((prev) => ({
+									...prev,
+									p1: { ...prev.p1, alive: false },
+								}))
+								setGameOver(true)
+								setTimeout(() => setShowAlert(true), 1000)
+							}
+						}
+						// Check Player 2
+						if (
+							playersRef.current.p2.x === ex &&
+							playersRef.current.p2.y === ey &&
+							playersRef.current.p2.alive
+						) {
+							if (playersRef.current.p2.pet) {
+								setPlayers((prev) => ({
+									...prev,
+									p2: {
+										...prev.p2,
+										pet: null,
+										speed: prev.p2.baseSpeed,
+									},
+								}))
+							} else {
+								setPlayers((prev) => ({
+									...prev,
+									p2: { ...prev.p2, alive: false },
+								}))
+								setGameOver(true)
+								setTimeout(() => setShowAlert(true), 1000)
+							}
+						}
+					})
+				})
+
+				// Clear expired explosions
 				const expired = prev.filter((e) => currentTime >= e.clearTime)
 				if (expired.length > 0) {
 					setGrid((grid) => {
@@ -552,7 +608,7 @@ export default function Game() {
 		}, 16)
 
 		return () => clearInterval(gameLoop)
-	}, [keys, gameOver, placeBomb, movePlayer, setGrid])
+	}, [keys, gameOver, placeBomb, movePlayer, setGrid, setPlayers])
 
 	const resetGame = useCallback(() => {
 		const newGrid = Array(GRID_SIZE)
@@ -614,6 +670,8 @@ export default function Game() {
 				orientation: "left",
 			},
 		}))
+		setExplosions([])
+		setPendingPowerups([])
 		setGameOver(false)
 		setShowAlert(false)
 	}, [setGrid, setPlayers])

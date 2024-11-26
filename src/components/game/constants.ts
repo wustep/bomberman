@@ -33,3 +33,6 @@ export const GRASS_SPAWN_CHANCE = 0.35
 export const PLAYER_1 = "😀"
 export const PLAYER_2 = "😎"
 export const PLAYER_DEAD = "💀"
+
+export const BOMB_DELAY_DURATION = 2000
+export const EXPLOSION_DURATION = 500 // Duration in milliseconds
