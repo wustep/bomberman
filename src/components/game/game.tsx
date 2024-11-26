@@ -1,5 +1,6 @@
 "use client"
 
+import { cn } from "@/lib/utils"
 import React, { useState, useEffect, useCallback, useRef } from "react"
 import { Badge } from "@/components/ui/badge"
 import GameOverAlert from "./GameOverAlert"
@@ -722,9 +723,12 @@ function GameGrid({
 								</div>
 							)}
 							<div
-								className={`z-10 ${
-									cell === CELL_EXPLOSION ? "text-3xl" : "text-2xl"
-								} absolute`}
+								className={cn(
+									"z-10 absolute transition-all duration-150",
+									cell === CELL_EXPLOSION
+										? "text-3xl opacity-100 scale-110"
+										: "text-2xl opacity-100 scale-100"
+								)}
 							>
 								{players.p1.x === x && players.p1.y === y
 									? players.p1.alive
