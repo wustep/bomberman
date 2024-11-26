@@ -25,10 +25,10 @@ export const POWERUPS = [
 export const POWERUP_SPAWN_CHANCE = 0.2
 export const POWERUP_SPAWN_INTERVAL = 10000
 
-export const POWERUP_SPAWN_PET_CHANCE = 0.4
+export const POWERUP_SPAWN_PET_CHANCE = 0.2
 
 export const POWERUP_SPAWN_GRASS_CHANCE = 0.35
-export const GRASS_SPAWN_CHANCE = 0.3
+export const GRASS_SPAWN_CHANCE = 0.35
 
 export const PLAYER_1 = "😀"
 export const PLAYER_2 = "😎"

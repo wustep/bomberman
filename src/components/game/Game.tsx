@@ -55,6 +55,8 @@ const PLAYER_2_CONTROLS: Direction[] = [
 	{ key: "arrowright", dx: 1, dy: 0 },
 ]
 
+export type Orientation = "left" | "right"
+
 type Player = {
 	x: number
 	y: number
@@ -65,8 +67,9 @@ type Player = {
 	alive: boolean
 	lastMove: number
 	kills: number
-	pet: typeof PET_OWL | typeof PET_TURTLE | null
+	pet: typeof CELL_POWERUP_OWL | typeof CELL_POWERUP_TURTLE | null
 	baseSpeed: number
+	orientation: Orientation
 }
 
 type Bomb = {
@@ -125,6 +128,7 @@ export default function Game() {
 			kills: 0,
 			pet: null,
 			baseSpeed: INITIAL_SPEED,
+			orientation: "right",
 		},
 		p2: {
 			x: GRID_SIZE - 2,
@@ -138,6 +142,7 @@ export default function Game() {
 			kills: 0,
 			pet: null,
 			baseSpeed: INITIAL_SPEED,
+			orientation: "left",
 		},
 	})
 	const playersRef = useRef<{ p1: Player; p2: Player }>(players)
@@ -222,12 +227,21 @@ export default function Game() {
 				return
 
 			const targetCell = gridRef.current[newY][newX]
+			// Don't allow colliding, but still change direction.
 			if (
 				targetCell === CELL_WALL ||
 				targetCell === CELL_BOMB ||
 				targetCell === CELL_GRASS
-			)
+			) {
+				setPlayers((prev) => ({
+					...prev,
+					[player]: {
+						...prev[player],
+						...(dx !== 0 ? { orientation: dx < 0 ? "left" : "right" } : {}),
+					},
+				}))
 				return
+			}
 
 			if (isPowerUp(targetCell)) {
 				setPlayers((prev) => {
@@ -242,10 +256,10 @@ export default function Game() {
 							: targetCell === CELL_POWERUP_BOMB
 							? { maxBombs: prev[player].maxBombs + 1 }
 							: targetCell === CELL_POWERUP_OWL
-							? { pet: CELL_POWERUP_OWL, speed: prev[player].baseSpeed * 2 }
+							? { pet: CELL_POWERUP_OWL, speed: 2 }
 							: {
 									pet: CELL_POWERUP_TURTLE,
-									speed: prev[player].baseSpeed * 0.5,
+									speed: 0.8,
 							  }
 
 					return {
@@ -273,6 +287,7 @@ export default function Game() {
 					x: newX,
 					y: newY,
 					lastMove: currentTime,
+					...(dx !== 0 ? { orientation: dx < 0 ? "left" : "right" } : {}),
 				},
 			}))
 		},
@@ -491,7 +506,7 @@ export default function Game() {
 			})
 
 			// Handle bomb placement
-			if (keys["e"]) placeBomb("p1")
+			if (keys["q"]) placeBomb("p1")
 			if (keys["rightshift"]) placeBomb("p2")
 
 			// Handle explosions and powerups
@@ -582,6 +597,7 @@ export default function Game() {
 				kills: players.p1.kills,
 				pet: null,
 				baseSpeed: INITIAL_SPEED,
+				orientation: "right",
 			},
 			p2: {
 				x: GRID_SIZE - 2,
@@ -595,6 +611,7 @@ export default function Game() {
 				kills: players.p2.kills,
 				pet: null,
 				baseSpeed: INITIAL_SPEED,
+				orientation: "left",
 			},
 		}))
 		setGameOver(false)
@@ -602,7 +619,7 @@ export default function Game() {
 	}, [setGrid, setPlayers])
 
 	useEffect(() => {
-		// resetGame()
+		resetGame()
 	}, [resetGame])
 
 	// Spawn powerups
@@ -787,21 +804,34 @@ export function GameCell({ cell, x, y, players }: GameCellProps) {
 				)}
 			>
 				{players.p1.x === x && players.p1.y === y ? (
-					<div className="relative flex flex-col items-center">
+					<div className={cn("relative flex flex-col items-center")}>
 						<span
 							className={cn(
 								"relative z-0",
-								players.p1.pet ? "text-xl mb-[-1.3rem]" : ""
+								players.p1.pet ? "text-xl mb-[-1rem]" : ""
 							)}
 						>
 							{players.p1.alive ? PLAYER_1 : PLAYER_DEAD}
 						</span>
 						{players.p1.pet && (
-							<span className="text-2xl z-10 relative">{players.p1.pet}</span>
+							<span
+								className={cn(
+									"text-2xl z-10 relative",
+									// Owl faces right (🦉), turtle faces left (🐢)
+									(players.p1.orientation === "left" &&
+										players.p1.pet === CELL_POWERUP_OWL) ||
+										(players.p1.orientation === "right" &&
+											players.p2.pet === CELL_POWERUP_TURTLE)
+										? "scale-x-[-1]"
+										: ""
+								)}
+							>
+								{players.p1.pet}
+							</span>
 						)}
 					</div>
 				) : players.p2.x === x && players.p2.y === y ? (
-					<div className="relative flex flex-col items-center">
+					<div className={cn("relative flex flex-col items-center")}>
 						<span
 							className={cn(
 								"relative z-0",
@@ -811,7 +841,19 @@ export function GameCell({ cell, x, y, players }: GameCellProps) {
 							{players.p2.alive ? PLAYER_2 : PLAYER_DEAD}
 						</span>
 						{players.p2.pet && (
-							<span className="text-2xl z-10 relative">{players.p2.pet}</span>
+							<span
+								className={cn(
+									"text-2xl z-10 relative",
+									(players.p2.orientation === "left" &&
+										players.p2.pet === CELL_POWERUP_OWL) ||
+										(players.p2.orientation === "right" &&
+											players.p2.pet === CELL_POWERUP_TURTLE)
+										? "scale-x-[-1]"
+										: ""
+								)}
+							>
+								{players.p2.pet}
+							</span>
 						)}
 					</div>
 				) : cell !== CELL_BOMB && cell !== CELL_WALL && cell !== CELL_EMPTY ? (
