@@ -8,6 +8,7 @@ export const CELL_WALL = "🟫"
 export const CELL_EXPLOSION = "🌸"
 export const CELL_BOMB = "💣"
 export const CELL_GRASS = "🟩"
+
 /**
  * Marker for grass that is breaking. Not displayed in game.
  */
