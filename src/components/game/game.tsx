@@ -14,14 +14,18 @@ const CELL_EMPTY = "⬜"
 const CELL_WALL = "🟫"
 const CELL_EXPLOSION = "🌸"
 const CELL_BOMB = "💣"
+const CELL_GRASS = "🟩"
 
 const CELL_POWERUP_SPEED = "⚡️"
 const CELL_POWERUP_RANGE = "💪"
 const CELL_POWERUP_BOMB = "➕"
 const POWERUPS = [CELL_POWERUP_SPEED, CELL_POWERUP_RANGE, CELL_POWERUP_BOMB]
 
-const POWERUP_SPAWN_CHANCE = 0.8
-const POWERUP_SPAWN_INTERVAL = 6000
+const POWERUP_SPAWN_CHANCE = 0.2
+const POWERUP_SPAWN_INTERVAL = 10000
+
+const POWERUP_SPAWN_GRASS_CHANCE = 0.35
+const GRASS_SPAWN_CHANCE = 0.3
 
 const PLAYER_1 = "😀"
 const PLAYER_2 = "😎"
@@ -194,7 +198,12 @@ export default function Game() {
 				return
 
 			const targetCell = gridRef.current[newY][newX]
-			if (targetCell === CELL_WALL || targetCell === CELL_BOMB) return
+			if (
+				targetCell === CELL_WALL ||
+				targetCell === CELL_BOMB ||
+				targetCell === CELL_GRASS
+			)
+				return
 
 			if (isPowerUp(targetCell)) {
 				setPlayers((prev) => {
@@ -265,6 +274,8 @@ export default function Game() {
 			const explodeBomb = (player: "p1" | "p2", bomb: Bomb) => {
 				const { x, y, range } = bomb
 				const explosionCoords: Array<[number, number]> = []
+				const triggeredBombs: { player: "p1" | "p2"; bomb: Bomb }[] = []
+				const powerupSpawns: Array<{ x: number; y: number }> = []
 
 				setPlayers((prev) => ({
 					...prev,
@@ -280,9 +291,6 @@ export default function Game() {
 					[1, 0],
 					[-1, 0],
 				]
-
-				// Find all bombs that will be triggered by this explosion
-				const triggeredBombs: { player: "p1" | "p2"; bomb: Bomb }[] = []
 
 				setGrid((prev) => {
 					const newGrid = [...prev]
@@ -307,7 +315,7 @@ export default function Game() {
 								break
 							}
 
-							// Check if there's a bomb at this coordinate
+							// Check for bombs to trigger chain reaction
 							if (newGrid[newY][newX] === CELL_BOMB) {
 								const p1Bomb = playersRef.current.p1.bombs.find(
 									(b) => b.x === newX && b.y === newY
@@ -321,6 +329,18 @@ export default function Game() {
 								} else if (p2Bomb) {
 									triggeredBombs.push({ player: "p2", bomb: p2Bomb })
 								}
+							}
+
+							// Handle grass - if it's grass, stop the explosion in this direction
+							if (newGrid[newY][newX] === CELL_GRASS) {
+								newGrid[newY][newX] = CELL_EXPLOSION
+								explosionCoords.push([newX, newY])
+								// Queue this location for potential powerup spawn
+								if (Math.random() < POWERUP_SPAWN_GRASS_CHANCE) {
+									// 30% chance for powerup
+									powerupSpawns.push({ x: newX, y: newY })
+								}
+								break // Stop the explosion in this direction
 							}
 
 							newGrid[newY][newX] = CELL_EXPLOSION
@@ -356,15 +376,30 @@ export default function Game() {
 				if (someoneKilled) {
 					setPlayers(newPlayers)
 					setGameOver(true)
-				} else {
-					// Trigger chain explosions with a small delay
-					triggeredBombs.forEach(({ player, bomb }, index) => {
-						setTimeout(() => {
-							explodeBomb(player, bomb)
-						}, 100 * (index + 1))
-					})
 				}
 
+				// Trigger chain explosions with a small delay
+				triggeredBombs.forEach(({ player, bomb }, index) => {
+					setTimeout(() => {
+						explodeBomb(player, bomb)
+					}, 100 * (index + 1))
+				})
+
+				// Spawn powerups after explosion clears
+				setTimeout(() => {
+					if (powerupSpawns.length > 0) {
+						setGrid((prev) => {
+							const newGrid = [...prev]
+							powerupSpawns.forEach(({ x, y }) => {
+								newGrid[y][x] =
+									POWERUPS[Math.floor(Math.random() * POWERUPS.length)]
+							})
+							return newGrid
+						})
+					}
+				}, 300)
+
+				// Clear explosions
 				setTimeout(() => {
 					setGrid((prev) => {
 						const clearedGrid = prev.map((row) =>
@@ -418,6 +453,19 @@ export default function Game() {
 			for (let j = 0; j < GRID_SIZE; j++) {
 				if (i % 2 === 0 && j % 2 === 0) {
 					newGrid[i][j] = CELL_WALL
+				} else if (
+					// Don't place grass in player starting positions and adjacent cells
+					!(
+						(i === 1 && j === 1) ||
+						(i === 1 && j === 2) ||
+						(i === 2 && j === 1) ||
+						(i === GRID_SIZE - 2 && j === GRID_SIZE - 2) ||
+						(i === GRID_SIZE - 2 && j === GRID_SIZE - 3) ||
+						(i === GRID_SIZE - 3 && j === GRID_SIZE - 2)
+					) &&
+					Math.random() <= GRASS_SPAWN_CHANCE
+				) {
+					newGrid[i][j] = CELL_GRASS
 				}
 			}
 		}
@@ -546,8 +594,8 @@ type WinnerTextProps = {
 
 function WinnerText({ p1Alive, p2Alive }: WinnerTextProps) {
 	if (!p1Alive && !p2Alive) return "It's a draw!"
-	if (!p1Alive) return "Player 2 wins! 🎉"
-	if (!p2Alive) return "Player 1 wins! 🎉"
+	if (!p1Alive) return `${PLAYER_2} wins! 🎉`
+	if (!p2Alive) return `${PLAYER_1} wins! 🎉`
 	return ""
 }
 
