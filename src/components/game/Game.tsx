@@ -667,9 +667,11 @@ export default function Game() {
 						(i === 1 && j === 1) ||
 						(i === 1 && j === 2) ||
 						(i === 2 && j === 1) ||
+						(i === 2 && j === 2) ||
 						(i === GRID_SIZE - 2 && j === GRID_SIZE - 2) ||
 						(i === GRID_SIZE - 2 && j === GRID_SIZE - 3) ||
-						(i === GRID_SIZE - 3 && j === GRID_SIZE - 2)
+						(i === GRID_SIZE - 3 && j === GRID_SIZE - 2) ||
+						(i === GRID_SIZE - 3 && j === GRID_SIZE - 3)
 					) &&
 					Math.random() <= GRASS_SPAWN_CHANCE
 				) {

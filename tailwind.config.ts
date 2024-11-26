@@ -63,17 +63,35 @@ export default {
 					"50%": { opacity: "0.3" },
 				},
 				explosion: {
-					"0%": { transform: "scale(0.8)", opacity: "1" },
-					"100%": { transform: "scale(1.2)", opacity: "0" },
+					"0%": {
+						transform: "scale(0.5)",
+						opacity: "0.8",
+					},
+					"50%": {
+						transform: "scale(1)",
+						opacity: "1",
+					},
+					"90%": {
+						transform: "scale(1.3)",
+						opacity: "0.2",
+					},
+					"100%": {
+						transform: "scale(1.2)",
+						opacity: "0",
+					},
 				},
 				grassBreak: {
 					"0%": { transform: "scale(1)", opacity: "1" },
-					"100%": { transform: "scale(0.8)", opacity: "0" },
+					"50%": { transform: "scale(0.8)", opacity: "0.8" },
+					"70%": { transform: "scale(0.6)", opacity: "0.6" },
+					"100%": { transform: "scale(0.2)", opacity: "0.4" },
 				},
 			},
+			// TODO: These animations should correspond to the game constants,
+			// and they generally need some more tuning.
 			animation: {
 				flash: "flash 400ms ease-in-out infinite",
-				explosion: "explosion 256ms ease-out forwards",
+				explosion: "explosion 600ms cubic-bezier(0.4, 0, 0.2, 1) forwards",
 				grassBreak: "grassBreak 200ms ease-out forwards",
 			},
 		},
