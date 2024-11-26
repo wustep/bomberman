@@ -1,9 +1,8 @@
 "use client"
 
 import React, { useState, useEffect, useCallback, useRef } from "react"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import GameOverAlert from "./GameOverAlert"
 
 const GRID_SIZE = 15
 const INITIAL_BOMBS_MAX = 1
@@ -155,6 +154,7 @@ export default function Game() {
 	const [tick, setTick] = useState(0)
 	const [explosions, setExplosions] = useState<Explosion[]>([])
 	const [pendingPowerups, setPendingPowerups] = useState<PowerupSpawn[]>([])
+	const [showAlert, setShowAlert] = useState(false)
 
 	// Key state management
 	useEffect(() => {
@@ -402,7 +402,10 @@ export default function Game() {
 				if (someoneKilled) {
 					setPlayers(newPlayers)
 					setGameOver(true)
-					// Clear any pending chain explosions by not triggering them
+					// Add delay before showing alert
+					setTimeout(() => {
+						setShowAlert(true)
+					}, 1000)
 					return
 				}
 
@@ -563,6 +566,7 @@ export default function Game() {
 			},
 		}))
 		setGameOver(false)
+		setShowAlert(false)
 	}, [setGrid, setPlayers])
 
 	useEffect(() => {
@@ -626,23 +630,14 @@ export default function Game() {
 			</div>
 
 			{gameOver && (
-				<div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
-					<div className="max-w-md w-full mx-4">
-						<Alert className="border-2">
-							<AlertDescription className="flex flex-col items-center gap-4 py-4">
-								<span className="text-2xl font-semibold">
-									<WinnerText
-										p1Alive={players.p1.alive}
-										p2Alive={players.p2.alive}
-									/>
-								</span>
-								<Button size="lg" onClick={resetGame}>
-									Play Again
-								</Button>
-							</AlertDescription>
-						</Alert>
-					</div>
-				</div>
+				<GameOverAlert
+					showAlert={showAlert}
+					p1Alive={players.p1.alive}
+					p2Alive={players.p2.alive}
+					onReset={resetGame}
+					PLAYER_1={PLAYER_1}
+					PLAYER_2={PLAYER_2}
+				/>
 			)}
 		</div>
 	)
@@ -650,18 +645,6 @@ export default function Game() {
 
 const isPowerUp = (cell: string | PowerUp): cell is PowerUp => {
 	return POWERUPS.includes(cell)
-}
-
-type WinnerTextProps = {
-	p1Alive: boolean
-	p2Alive: boolean
-}
-
-function WinnerText({ p1Alive, p2Alive }: WinnerTextProps) {
-	if (!p1Alive && !p2Alive) return "It's a draw!"
-	if (!p1Alive) return `${PLAYER_2} wins! 🎉`
-	if (!p2Alive) return `${PLAYER_1} wins! 🎉`
-	return ""
 }
 
 type PlayerStatsProps = {

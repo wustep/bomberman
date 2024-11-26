@@ -1,4 +1,4 @@
-import Game from "@/components/game/game"
+import Game from "@/components/game/Game"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function Home() {
