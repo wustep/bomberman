@@ -20,7 +20,7 @@ const CELL_POWERUP_RANGE = "💪"
 const CELL_POWERUP_BOMB = "➕"
 const POWERUPS = [CELL_POWERUP_SPEED, CELL_POWERUP_RANGE, CELL_POWERUP_BOMB]
 
-const POWERUP_SPAWN_CHANCE = 0.1
+const POWERUP_SPAWN_CHANCE = 0.8
 const POWERUP_SPAWN_INTERVAL = 5000
 
 const PLAYER_1 = "😀"
@@ -67,6 +67,7 @@ type Bomb = {
 	y: number
 	timer: number
 	range: number
+	startTime: number
 }
 
 type PowerUp = "⚡️" | "💪" | "➕"
@@ -232,7 +233,7 @@ export default function Game() {
 				},
 			}))
 		},
-		[players, setGrid, setPlayers]
+		[setGrid, setPlayers]
 	)
 
 	const placeBomb = useCallback(
@@ -243,7 +244,13 @@ export default function Game() {
 
 			if (gridRef.current[y][x] === CELL_BOMB) return
 
-			const newBomb = { x, y, timer: 3, range: bombRange }
+			const newBomb = {
+				x,
+				y,
+				timer: 3,
+				range: bombRange,
+				startTime: Date.now(),
+			}
 			setPlayers((prev) => ({
 				...prev,
 				[player]: { ...prev[player], bombs: [...prev[player].bombs, newBomb] },
@@ -462,44 +469,37 @@ export default function Game() {
 			</div>
 
 			<div className="flex justify-center">
-				<div className="grid grid-cols-1 gap-0 bg-secondary p-4 rounded-lg overflow-auto max-h-[80vh]">
-					{grid.map((row, y) => (
-						<div key={y} className="flex">
-							{row.map((cell, x) => (
-								<div
-									key={`${x}-${y}`}
-									className="w-8 h-8 flex items-center justify-center relative"
-								>
-									{cell === CELL_BOMB && (
-										<div className="absolute text-3xl z-0">💣</div>
-									)}
-									<div className="z-10 text-2xl">
-										{players.p1.x === x && players.p1.y === y
-											? players.p1.alive
-												? PLAYER_1
-												: PLAYER_DEAD
-											: players.p2.x === x && players.p2.y === y
-											? players.p2.alive
-												? PLAYER_2
-												: PLAYER_DEAD
-											: cell !== CELL_BOMB
-											? cell
-											: null}
-									</div>
-								</div>
-							))}
-						</div>
-					))}
-				</div>
+				<GameGrid
+					grid={grid}
+					players={players}
+					CELL_WALL={CELL_WALL}
+					CELL_EMPTY={CELL_EMPTY}
+					CELL_BOMB={CELL_BOMB}
+					CELL_EXPLOSION={CELL_EXPLOSION}
+					PLAYER_1={PLAYER_1}
+					PLAYER_2={PLAYER_2}
+					PLAYER_DEAD={PLAYER_DEAD}
+				/>
 			</div>
 
 			{gameOver && (
-				<Alert>
-					<AlertDescription className="flex items-center justify-between">
-						<WinnerText p1Alive={players.p1.alive} p2Alive={players.p2.alive} />
-						<Button onClick={resetGame}>Play Again</Button>
-					</AlertDescription>
-				</Alert>
+				<div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
+					<div className="max-w-md w-full mx-4">
+						<Alert className="border-2">
+							<AlertDescription className="flex flex-col items-center gap-4 py-4">
+								<span className="text-2xl font-semibold">
+									<WinnerText
+										p1Alive={players.p1.alive}
+										p2Alive={players.p2.alive}
+									/>
+								</span>
+								<Button size="lg" onClick={resetGame}>
+									Play Again
+								</Button>
+							</AlertDescription>
+						</Alert>
+					</div>
+				</div>
 			)}
 		</div>
 	)
@@ -528,4 +528,93 @@ type PlayerStatsProps = {
 
 function PlayerStats({ speed, bombRange }: PlayerStatsProps) {
 	return `Speed: ${speed.toFixed(1)}x | Bomb Range: ${bombRange}x1`
+}
+
+type GameGridProps = {
+	grid: (string | PowerUp)[][]
+	players: {
+		p1: Player
+		p2: Player
+	}
+	CELL_WALL: string
+	CELL_EMPTY: string
+	CELL_BOMB: string
+	CELL_EXPLOSION: string
+	PLAYER_1: string
+	PLAYER_2: string
+	PLAYER_DEAD: string
+}
+
+function GameGrid({
+	grid,
+	players,
+	CELL_WALL,
+	CELL_EMPTY,
+	CELL_BOMB,
+	CELL_EXPLOSION,
+	PLAYER_1,
+	PLAYER_2,
+	PLAYER_DEAD,
+}: GameGridProps) {
+	return (
+		<div className="grid grid-cols-1 gap-0 bg-secondary p-4 rounded-lg overflow-auto max-h-[80vh]">
+			{grid.map((row, y) => (
+				<div key={y} className="flex">
+					{row.map((cell, x) => (
+						<div
+							key={`${x}-${y}`}
+							className="w-8 h-8 flex items-center justify-center relative"
+						>
+							<div className="absolute inset-0 flex items-center justify-center text-3xl">
+								{cell === CELL_WALL ? CELL_WALL : CELL_EMPTY}
+							</div>
+							{cell === CELL_BOMB && (
+								<div
+									className="absolute text-3xl z-0 transition-all duration-75"
+									style={{
+										filter: (() => {
+											const bomb = [
+												...players.p1.bombs,
+												...players.p2.bombs,
+											].find((b) => b.x === x && b.y === y)
+											if (!bomb) return "none"
+											const elapsed = (Date.now() - bomb.startTime) / 1000
+											const progress = Math.min(elapsed / 2, 1)
+											return `
+												sepia(${progress * 100}%)
+												saturate(${100 + progress * 700}%)
+												hue-rotate(${-progress * 130}deg)
+												brightness(${100 + progress * 150}%)
+											`
+										})(),
+									}}
+								>
+									💣
+								</div>
+							)}
+							<div
+								className={`z-10 ${
+									cell === CELL_EXPLOSION ? "text-3xl" : "text-2xl"
+								} absolute`}
+							>
+								{players.p1.x === x && players.p1.y === y
+									? players.p1.alive
+										? PLAYER_1
+										: PLAYER_DEAD
+									: players.p2.x === x && players.p2.y === y
+									? players.p2.alive
+										? PLAYER_2
+										: PLAYER_DEAD
+									: cell !== CELL_BOMB &&
+									  cell !== CELL_WALL &&
+									  cell !== CELL_EMPTY
+									? cell
+									: null}
+							</div>
+						</div>
+					))}
+				</div>
+			))}
+		</div>
+	)
 }
