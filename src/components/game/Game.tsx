@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils"
 import React, { useState, useEffect, useCallback, useRef } from "react"
 import { Badge } from "@/components/ui/badge"
 import GameOverAlert from "./GameOverAlert"
+import SettingsPanel from "./SettingsPanel"
 
 import {
 	GRID_SIZE,
@@ -194,6 +195,7 @@ export default function Game() {
 	const [, setExplosions] = useState<Explosion[]>([])
 	const [, setPendingPowerups] = useState<PowerupSpawn[]>([])
 	const [showAlert, setShowAlert] = useState(false)
+	const [debugMode, setDebugMode] = useState(DEBUG)
 
 	// Key state management
 	useEffect(() => {
@@ -774,12 +776,19 @@ export default function Game() {
 			<div className="flex justify-between mb-4">
 				<div className="space-y-2">
 					<Badge variant={players.p1.alive ? "default" : "destructive"}>
-						Player 1: WASD + E (bomb)
+						Player 1: WASD + Q (bomb)
 					</Badge>
 					<div className="text-sm">
 						<PlayerStats {...players.p1} />
 					</div>
 				</div>
+				<SettingsPanel
+					debug={debugMode}
+					onDebugChange={(enabled) => {
+						setDebugMode(enabled)
+					}}
+					onReset={resetGame}
+				/>
 				<div className="space-y-2">
 					<Badge variant={players.p2.alive ? "default" : "destructive"}>
 						Player 2: Arrows + Right Shift (bomb)

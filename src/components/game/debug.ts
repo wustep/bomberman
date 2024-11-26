@@ -21,11 +21,11 @@ export const DEBUG_STARTING_POWERUPS = {
 	P1: {
 		speed: INITIAL_SPEED + 1,
 		bombRange: INITIAL_BOMB_RANGE + 1,
-		maxBombs: INITIAL_BOMBS_MAX + 1,
+		maxBombs: INITIAL_BOMBS_MAX + 3,
 	},
 	P2: {
 		speed: INITIAL_SPEED + 1,
 		bombRange: INITIAL_BOMB_RANGE + 1,
-		maxBombs: INITIAL_BOMBS_MAX + 2,
+		maxBombs: INITIAL_BOMBS_MAX + 3,
 	},
 }
