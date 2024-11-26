@@ -25,6 +25,7 @@ export const POWERUPS = [
 	CELL_POWERUP_OWL,
 	CELL_POWERUP_TURTLE,
 ]
+export type PowerUp = (typeof POWERUPS)[number]
 
 export const PET_OWL = CELL_POWERUP_OWL
 export const PET_TURTLE = CELL_POWERUP_TURTLE

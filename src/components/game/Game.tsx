@@ -37,10 +37,14 @@ import {
 	Pet,
 	CHAIN_EXPLOSION_DELAY,
 	CELL_GRASS_BREAKING,
+	PowerUp,
 } from "./constants"
 
 import { DEBUG, DEBUG_STARTING_PETS, DEBUG_STARTING_POWERUPS } from "./debug"
 
+/**
+ * State of keys held down.
+ */
 type KeyState = {
 	[key: string]: boolean
 }
@@ -65,9 +69,17 @@ const PLAYER_2_CONTROLS: Direction[] = [
 	{ key: "arrowright", dx: 1, dy: 0 },
 ]
 
+/**
+ * The way a player is facing.
+ * Used to align the player's sprite.
+ */
 export type Orientation = "left" | "right"
 
+/**
+ * Player state.
+ */
 type Player = {
+	// Game-specific state.
 	x: number
 	y: number
 	bombs: Bomb[]
@@ -76,13 +88,17 @@ type Player = {
 	speed: number
 	alive: boolean
 	lastMove: number
-	kills: number
 	pet: Pet | null
 	baseSpeed: number
 	orientation: Orientation
 	invulnerableUntil: number
+	// Stats state that persists after death.
+	kills: number
 }
 
+/**
+ * Bomb state.
+ */
 type Bomb = {
 	x: number
 	y: number
@@ -90,8 +106,6 @@ type Bomb = {
 	range: number
 	startTime: number
 }
-
-type PowerUp = "⚡️" | "💪" | "➕" | "🦉" | "🐢"
 
 type Explosion = {
 	coords: [number, number][]
@@ -800,7 +814,7 @@ type PlayerStatsProps = {
 	speed: number
 	bombRange: number
 	kills: number
-	pet: typeof PET_OWL | typeof PET_TURTLE | null
+	pet: Pet | null
 }
 
 function PlayerStats({ speed, bombRange, kills, pet }: PlayerStatsProps) {
