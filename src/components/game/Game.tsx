@@ -31,6 +31,7 @@ import {
 	POWERUP_SPAWN_PET_CHANCE,
 	EXPLOSION_DURATION,
 	BOMB_DELAY_DURATION,
+	INVULNERABILITY_DURATION,
 } from "./constants"
 
 type KeyState = {
@@ -72,6 +73,7 @@ type Player = {
 	pet: typeof CELL_POWERUP_OWL | typeof CELL_POWERUP_TURTLE | null
 	baseSpeed: number
 	orientation: Orientation
+	invulnerableUntil: number
 }
 
 type Bomb = {
@@ -131,6 +133,7 @@ export default function Game() {
 			pet: null,
 			baseSpeed: INITIAL_SPEED,
 			orientation: "right",
+			invulnerableUntil: 0,
 		},
 		p2: {
 			x: GRID_SIZE - 2,
@@ -145,6 +148,7 @@ export default function Game() {
 			pet: null,
 			baseSpeed: INITIAL_SPEED,
 			orientation: "left",
+			invulnerableUntil: 0,
 		},
 	})
 	const playersRef = useRef<{ p1: Player; p2: Player }>(players)
@@ -325,6 +329,7 @@ export default function Game() {
 			const explodeBomb = (player: "p1" | "p2", bomb: Bomb) => {
 				// Early return if game is already over
 				if (gameOver) return
+				const currentTime = Date.now()
 
 				const { x, y, range } = bomb
 				const explosionCoords: Array<[number, number]> = []
@@ -412,7 +417,8 @@ export default function Game() {
 					if (
 						playersRef.current.p1.x === ex &&
 						playersRef.current.p1.y === ey &&
-						playersRef.current.p1.alive
+						playersRef.current.p1.alive &&
+						currentTime > playersRef.current.p1.invulnerableUntil
 					) {
 						if (newPlayers.p1.pet) {
 							// Remove pet and reset speed
@@ -429,7 +435,8 @@ export default function Game() {
 					if (
 						playersRef.current.p2.x === ex &&
 						playersRef.current.p2.y === ey &&
-						playersRef.current.p2.alive
+						playersRef.current.p2.alive &&
+						currentTime > playersRef.current.p2.invulnerableUntil
 					) {
 						if (newPlayers.p2.pet) {
 							// Remove pet and reset speed
@@ -518,11 +525,14 @@ export default function Game() {
 			setExplosions((prev) => {
 				prev.forEach((explosion) => {
 					explosion.coords.forEach(([ex, ey]) => {
+						const currentTime = Date.now()
+
 						// Check Player 1
 						if (
 							playersRef.current.p1.x === ex &&
 							playersRef.current.p1.y === ey &&
-							playersRef.current.p1.alive
+							playersRef.current.p1.alive &&
+							currentTime > playersRef.current.p1.invulnerableUntil
 						) {
 							if (playersRef.current.p1.pet) {
 								setPlayers((prev) => ({
@@ -531,6 +541,7 @@ export default function Game() {
 										...prev.p1,
 										pet: null,
 										speed: prev.p1.baseSpeed,
+										invulnerableUntil: currentTime + INVULNERABILITY_DURATION,
 									},
 								}))
 							} else {
@@ -546,7 +557,8 @@ export default function Game() {
 						if (
 							playersRef.current.p2.x === ex &&
 							playersRef.current.p2.y === ey &&
-							playersRef.current.p2.alive
+							playersRef.current.p2.alive &&
+							currentTime > playersRef.current.p2.invulnerableUntil
 						) {
 							if (playersRef.current.p2.pet) {
 								setPlayers((prev) => ({
@@ -555,6 +567,7 @@ export default function Game() {
 										...prev.p2,
 										pet: null,
 										speed: prev.p2.baseSpeed,
+										invulnerableUntil: currentTime + INVULNERABILITY_DURATION,
 									},
 								}))
 							} else {
@@ -654,6 +667,7 @@ export default function Game() {
 				pet: null,
 				baseSpeed: INITIAL_SPEED,
 				orientation: "right",
+				invulnerableUntil: 0,
 			},
 			p2: {
 				x: GRID_SIZE - 2,
@@ -668,6 +682,7 @@ export default function Game() {
 				pet: null,
 				baseSpeed: INITIAL_SPEED,
 				orientation: "left",
+				invulnerableUntil: 0,
 			},
 		}))
 		setExplosions([])
@@ -822,6 +837,11 @@ type GameCellProps = {
 }
 
 export function GameCell({ cell, x, y, players }: GameCellProps) {
+	const isP1Here = players.p1.x === x && players.p1.y === y
+	const isP2Here = players.p2.x === x && players.p2.y === y
+	const p1Invulnerable = Date.now() < players.p1.invulnerableUntil
+	const p2Invulnerable = Date.now() < players.p2.invulnerableUntil
+
 	return (
 		<div
 			key={`${x}-${y}`}
@@ -858,7 +878,10 @@ export function GameCell({ cell, x, y, players }: GameCellProps) {
 					"z-10 absolute transition-all",
 					cell === CELL_EXPLOSION
 						? "text-3xl animate-[explosion_256ms_ease-out_forwards]"
-						: "text-2xl"
+						: "text-2xl",
+					(isP1Here && p1Invulnerable) || (isP2Here && p2Invulnerable)
+						? "animate-[flash_400ms_ease-in-out_infinite]"
+						: ""
 				)}
 			>
 				{players.p1.x === x && players.p1.y === y ? (

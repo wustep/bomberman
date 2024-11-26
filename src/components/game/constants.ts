@@ -35,4 +35,12 @@ export const PLAYER_2 = "😎"
 export const PLAYER_DEAD = "💀"
 
 export const BOMB_DELAY_DURATION = 2000
-export const EXPLOSION_DURATION = 500 // Duration in milliseconds
+/**
+ * Duration of an explosion in ms.
+ */
+export const EXPLOSION_DURATION = 500
+
+/**
+ * Duration of vulnerability after pet dies in ms.
+ */
+export const INVULNERABILITY_DURATION = 1500
