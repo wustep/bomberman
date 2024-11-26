@@ -29,16 +29,15 @@ import {
 	EXPLOSION_DURATION,
 	BOMB_DELAY_DURATION,
 	INVULNERABILITY_DURATION,
-	PET_OWL,
-	PET_TURTLE,
-	Pet,
 	CHAIN_EXPLOSION_DELAY,
 	CELL_GRASS_BREAKING,
-	PowerUp,
+	getPowerUpFromEmoji,
+	POWERUP_EMOJIS,
 } from "./constants"
 
 import { DEBUG, DEBUG_STARTING_PETS, DEBUG_STARTING_POWERUPS } from "./debug"
 import { GameCell } from "./GameCell"
+import { Pet } from "./types"
 
 /**
  * State of keys held down.
@@ -118,18 +117,14 @@ type PowerupSpawn = {
 
 export default function Game() {
 	const [keys, setKeys] = useState<KeyState>({})
-	const [grid, _setGrid] = useState<(string | PowerUp)[][]>(
+	const [grid, _setGrid] = useState<string[][]>(
 		Array(GRID_SIZE)
 			.fill(null)
 			.map(() => Array(GRID_SIZE).fill(CELL_EMPTY))
 	)
-	const gridRef = useRef<(string | PowerUp)[][]>(grid)
+	const gridRef = useRef<string[][]>(grid)
 	const setGrid = useCallback(
-		(
-			newGrid:
-				| (string | PowerUp)[][]
-				| ((prev: (string | PowerUp)[][]) => (string | PowerUp)[][])
-		) => {
+		(newGrid: string[][] | ((prev: string[][]) => string[][])) => {
 			const updatedGrid =
 				typeof newGrid === "function" ? newGrid(gridRef.current) : newGrid
 			_setGrid(updatedGrid)
@@ -272,27 +267,8 @@ export default function Game() {
 
 			if (isPowerUp(targetCell)) {
 				setPlayers((prev) => {
-					let upgrade = {}
-					switch (targetCell) {
-						case CELL_POWERUP_SPEED:
-							upgrade = {
-								speed: prev[player].speed + 0.5,
-								baseSpeed: prev[player].baseSpeed + 0.5,
-							}
-							break
-						case CELL_POWERUP_RANGE:
-							upgrade = { bombRange: prev[player].bombRange + 1 }
-							break
-						case CELL_POWERUP_BOMB:
-							upgrade = { maxBombs: prev[player].maxBombs + 1 }
-							break
-						case CELL_POWERUP_OWL:
-							upgrade = { pet: PET_OWL, speed: 2 }
-							break
-						case CELL_POWERUP_TURTLE:
-							upgrade = { pet: PET_TURTLE, speed: 0.8 }
-							break
-					}
+					const powerUp = getPowerUpFromEmoji(targetCell)
+					const upgrade = powerUp?.effect(prev[player])
 
 					return {
 						...prev,
@@ -812,8 +788,8 @@ export default function Game() {
 	)
 }
 
-const isPowerUp = (cell: string | PowerUp): cell is PowerUp => {
-	return POWERUPS.includes(cell)
+const isPowerUp = (cell: string): boolean => {
+	return POWERUP_EMOJIS.includes(cell)
 }
 
 type PlayerStatsProps = {
@@ -829,9 +805,9 @@ function PlayerStats({ speed, bombRange, kills, pet }: PlayerStatsProps) {
 			Speed:{" "}
 			<span
 				className={
-					pet === PET_OWL
+					pet?.emoji === POWERUPS.OWL.emoji
 						? "text-amber-700 font-semibold"
-						: pet === PET_TURTLE
+						: pet?.emoji === POWERUPS.TURTLE.emoji
 						? "text-green-700 font-semibold"
 						: ""
 				}
@@ -844,7 +820,7 @@ function PlayerStats({ speed, bombRange, kills, pet }: PlayerStatsProps) {
 }
 
 type GameGridProps = {
-	grid: (string | PowerUp)[][]
+	grid: string[][]
 	players: {
 		p1: Player
 		p2: Player

@@ -2,10 +2,9 @@ import {
 	INITIAL_BOMBS_MAX,
 	INITIAL_BOMB_RANGE,
 	INITIAL_SPEED,
-	PET_OWL,
-	PET_TURTLE,
-	Pet,
+	POWERUPS,
 } from "./constants"
+import { Pet } from "./types"
 
 export const DEBUG = false
 
@@ -13,8 +12,8 @@ export const DEBUG_STARTING_PETS: {
 	P1: Pet | null
 	P2: Pet | null
 } = {
-	P1: PET_OWL,
-	P2: PET_TURTLE,
+	P1: POWERUPS.OWL,
+	P2: POWERUPS.TURTLE,
 }
 
 export const DEBUG_STARTING_POWERUPS = {

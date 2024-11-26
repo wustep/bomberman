@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils"
-import { Orientation, Player } from "./types"
+import { Orientation, Pet, Player } from "./types"
 import {
 	CELL_WALL,
 	CELL_GRASS,
@@ -10,10 +10,7 @@ import {
 	PLAYER_1,
 	PLAYER_2,
 	PLAYER_DEAD,
-	PET_OWL,
-	PET_TURTLE,
-	PowerUp,
-	Pet,
+	POWERUPS,
 } from "./constants"
 
 type GameCellProps = {
@@ -72,6 +69,7 @@ export function GameCell({ cell, x, y, players }: GameCellProps) {
 
 function BaseCell({ cell }: { cell: string }) {
 	if (cell === CELL_GRASS_BREAKING) {
+		// TODO make sure wall shows too!
 		return (
 			<div
 				className={cn(
@@ -85,7 +83,12 @@ function BaseCell({ cell }: { cell: string }) {
 	}
 
 	return (
-		<div className="absolute inset-0 flex items-center justify-center text-3xl">
+		<div
+			className={cn(
+				"absolute inset-0 flex items-center justify-center text-3xl",
+				`z-[${zIndices.baseCell}]`
+			)}
+		>
 			{cell === CELL_WALL
 				? CELL_WALL
 				: cell === CELL_GRASS
@@ -144,6 +147,14 @@ function PlayerAvatar({
 	orientation: Orientation
 	isInvulnerable: boolean
 }) {
+	/**
+	 * Owl faces right (🦉), turtle faces left (🐢),
+	 * so we flip the pet if the player is facing the opposite direction.
+	 */
+	const shouldFlip =
+		(orientation === "left" && pet?.emoji === POWERUPS.OWL.emoji) ||
+		(orientation === "right" && pet?.emoji === POWERUPS.TURTLE.emoji)
+
 	return (
 		<div
 			className={cn(
@@ -163,15 +174,12 @@ function PlayerAvatar({
 			{pet && (
 				<span
 					className={cn(
-						"text-2xl z-10 relative",
-						// Owl faces right (🦉), turtle faces left (🐢)
-						(orientation === "left" && pet === PET_OWL) ||
-							(orientation === "right" && pet === PET_TURTLE)
-							? "scale-x-[-1]"
-							: ""
+						"text-2xl relative",
+						`z-[${zIndices.pet}]`,
+						shouldFlip ? "scale-x-[-1]" : ""
 					)}
 				>
-					{pet}
+					{pet.emoji}
 				</span>
 			)}
 		</div>
@@ -182,4 +190,5 @@ const zIndices = {
 	baseCell: 0,
 	bomb: 1,
 	player: 2,
+	pet: 3,
 }
