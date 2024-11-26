@@ -21,7 +21,7 @@ const CELL_POWERUP_BOMB = "➕"
 const POWERUPS = [CELL_POWERUP_SPEED, CELL_POWERUP_RANGE, CELL_POWERUP_BOMB]
 
 const POWERUP_SPAWN_CHANCE = 0.8
-const POWERUP_SPAWN_INTERVAL = 5000
+const POWERUP_SPAWN_INTERVAL = 6000
 
 const PLAYER_1 = "😀"
 const PLAYER_2 = "😎"
@@ -281,6 +281,9 @@ export default function Game() {
 					[-1, 0],
 				]
 
+				// Find all bombs that will be triggered by this explosion
+				const triggeredBombs: { player: "p1" | "p2"; bomb: Bomb }[] = []
+
 				setGrid((prev) => {
 					const newGrid = [...prev]
 
@@ -302,6 +305,22 @@ export default function Game() {
 								newGrid[newY][newX] === CELL_WALL
 							) {
 								break
+							}
+
+							// Check if there's a bomb at this coordinate
+							if (newGrid[newY][newX] === CELL_BOMB) {
+								const p1Bomb = playersRef.current.p1.bombs.find(
+									(b) => b.x === newX && b.y === newY
+								)
+								const p2Bomb = playersRef.current.p2.bombs.find(
+									(b) => b.x === newX && b.y === newY
+								)
+
+								if (p1Bomb) {
+									triggeredBombs.push({ player: "p1", bomb: p1Bomb })
+								} else if (p2Bomb) {
+									triggeredBombs.push({ player: "p2", bomb: p2Bomb })
+								}
 							}
 
 							newGrid[newY][newX] = CELL_EXPLOSION
@@ -337,6 +356,13 @@ export default function Game() {
 				if (someoneKilled) {
 					setPlayers(newPlayers)
 					setGameOver(true)
+				} else {
+					// Trigger chain explosions with a small delay
+					triggeredBombs.forEach(({ player, bomb }, index) => {
+						setTimeout(() => {
+							explodeBomb(player, bomb)
+						}, 100 * (index + 1))
+					})
 				}
 
 				setTimeout(() => {
@@ -430,13 +456,16 @@ export default function Game() {
 	}, [resetGame])
 
 	// Spawn powerups
+	// TODO: make this spawn during a frame
 	useEffect(() => {
-		setTimeout(() => {
-			if (Math.random() < POWERUP_SPAWN_CHANCE) {
+		const spawnPowerup = setInterval(() => {
+			console.log("spawn powerup attempt")
+			if (Math.random() <= POWERUP_SPAWN_CHANCE) {
 				const x = Math.floor(Math.random() * GRID_SIZE)
 				const y = Math.floor(Math.random() * GRID_SIZE)
 				setGrid((prev) => {
 					const newGrid = [...prev]
+					console.log(newGrid[y][x])
 					if (newGrid[y][x] === CELL_EMPTY) {
 						newGrid[y][x] =
 							POWERUPS[Math.floor(Math.random() * POWERUPS.length)]
@@ -445,6 +474,7 @@ export default function Game() {
 				})
 			}
 		}, POWERUP_SPAWN_INTERVAL)
+		return () => clearInterval(spawnPowerup)
 	}, [setGrid])
 
 	return (
