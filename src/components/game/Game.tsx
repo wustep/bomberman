@@ -27,6 +27,7 @@ import {
 	PLAYER_2,
 	PLAYER_DEAD,
 	GRASS_SPAWN_CHANCE,
+	POWERUP_SPAWN_PET_CHANCE,
 } from "./constants"
 
 type KeyState = {
@@ -708,8 +709,7 @@ function GameGrid({ grid, players }: GameGridProps) {
 
 const getRandomPowerup = () => {
 	const rand = Math.random()
-	if (rand < 0.1) {
-		// 10% chance for owl
+	if (rand < POWERUP_SPAWN_PET_CHANCE) {
 		return CELL_POWERUP_OWL
 	}
 	// Distribute remaining 90% among other powerups
