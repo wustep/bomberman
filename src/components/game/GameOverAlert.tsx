@@ -2,26 +2,14 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useEffect } from "react"
+import { PLAYER_1 } from "./constants"
+import { PLAYER_2 } from "./constants"
 
 type GameOverAlertProps = {
 	showAlert: boolean
 	p1Alive: boolean
 	p2Alive: boolean
 	onReset: () => void
-	PLAYER_1: string
-	PLAYER_2: string
-}
-
-function WinnerText({
-	p1Alive,
-	p2Alive,
-	PLAYER_1,
-	PLAYER_2,
-}: Omit<GameOverAlertProps, "showAlert" | "onReset">) {
-	if (!p1Alive && !p2Alive) return "It's a draw!"
-	if (!p1Alive) return `${PLAYER_2} wins! 🎉`
-	if (!p2Alive) return `${PLAYER_1} wins! 🎉`
-	return ""
 }
 
 export default function GameOverAlert({
@@ -29,8 +17,6 @@ export default function GameOverAlert({
 	p1Alive,
 	p2Alive,
 	onReset,
-	PLAYER_1,
-	PLAYER_2,
 }: GameOverAlertProps) {
 	// Add key handler for enter
 	useEffect(() => {
@@ -55,12 +41,7 @@ export default function GameOverAlert({
 				<Alert className="border-2">
 					<AlertDescription className="flex flex-col items-center gap-4 py-4">
 						<span className="text-2xl font-semibold">
-							<WinnerText
-								p1Alive={p1Alive}
-								p2Alive={p2Alive}
-								PLAYER_1={PLAYER_1}
-								PLAYER_2={PLAYER_2}
-							/>
+							<WinnerText p1Alive={p1Alive} p2Alive={p2Alive} />
 						</span>
 						<Button size="lg" onClick={onReset}>
 							Play Again
@@ -70,4 +51,14 @@ export default function GameOverAlert({
 			</div>
 		</div>
 	)
+}
+
+function WinnerText({
+	p1Alive,
+	p2Alive,
+}: Omit<GameOverAlertProps, "showAlert" | "onReset">) {
+	if (!p1Alive && !p2Alive) return "It's a draw!"
+	if (!p1Alive) return `${PLAYER_2} wins! 🎉`
+	if (!p2Alive) return `${PLAYER_1} wins! 🎉`
+	return ""
 }

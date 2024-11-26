@@ -5,31 +5,29 @@ import React, { useState, useEffect, useCallback, useRef } from "react"
 import { Badge } from "@/components/ui/badge"
 import GameOverAlert from "./GameOverAlert"
 
-const GRID_SIZE = 15
-const INITIAL_BOMBS_MAX = 1
-const INITIAL_BOMB_RANGE = 1
-const INITIAL_SPEED = 1
-
-const CELL_EMPTY = "⬜"
-const CELL_WALL = "🟫"
-const CELL_EXPLOSION = "🌸"
-const CELL_BOMB = "💣"
-const CELL_GRASS = "🟩"
-
-const CELL_POWERUP_SPEED = "⚡️"
-const CELL_POWERUP_RANGE = "💪"
-const CELL_POWERUP_BOMB = "➕"
-const POWERUPS = [CELL_POWERUP_SPEED, CELL_POWERUP_RANGE, CELL_POWERUP_BOMB]
-
-const POWERUP_SPAWN_CHANCE = 0.2
-const POWERUP_SPAWN_INTERVAL = 10000
-
-const POWERUP_SPAWN_GRASS_CHANCE = 0.35
-const GRASS_SPAWN_CHANCE = 0.3
-
-const PLAYER_1 = "😀"
-const PLAYER_2 = "😎"
-const PLAYER_DEAD = "💀"
+import {
+	GRID_SIZE,
+	INITIAL_BOMBS_MAX,
+	INITIAL_BOMB_RANGE,
+	INITIAL_SPEED,
+	CELL_EMPTY,
+	CELL_WALL,
+	CELL_EXPLOSION,
+	CELL_BOMB,
+	CELL_GRASS,
+	CELL_POWERUP_SPEED,
+	CELL_POWERUP_RANGE,
+	CELL_POWERUP_BOMB,
+	CELL_POWERUP_OWL,
+	POWERUPS,
+	POWERUP_SPAWN_CHANCE,
+	POWERUP_SPAWN_INTERVAL,
+	POWERUP_SPAWN_GRASS_CHANCE,
+	PLAYER_1,
+	PLAYER_2,
+	PLAYER_DEAD,
+	GRASS_SPAWN_CHANCE,
+} from "./constants"
 
 type KeyState = {
 	[key: string]: boolean
@@ -65,6 +63,8 @@ type Player = {
 	alive: boolean
 	lastMove: number
 	kills: number
+	hasOwl: boolean
+	baseSpeed: number
 }
 
 type Bomb = {
@@ -75,7 +75,7 @@ type Bomb = {
 	startTime: number
 }
 
-type PowerUp = "⚡️" | "💪" | "➕"
+type PowerUp = "⚡️" | "💪" | "➕" | "🦉"
 
 type Explosion = {
 	coords: [number, number][]
@@ -118,9 +118,11 @@ export default function Game() {
 			maxBombs: INITIAL_BOMBS_MAX,
 			bombRange: INITIAL_BOMB_RANGE,
 			speed: INITIAL_SPEED,
+			baseSpeed: INITIAL_SPEED,
 			alive: true,
 			lastMove: 0,
 			kills: 0,
+			hasOwl: false,
 		},
 		p2: {
 			x: GRID_SIZE - 2,
@@ -129,9 +131,11 @@ export default function Game() {
 			maxBombs: INITIAL_BOMBS_MAX,
 			bombRange: INITIAL_BOMB_RANGE,
 			speed: INITIAL_SPEED,
+			baseSpeed: INITIAL_SPEED,
 			alive: true,
 			lastMove: 0,
 			kills: 0,
+			hasOwl: false,
 		},
 	})
 	const playersRef = useRef<{ p1: Player; p2: Player }>(players)
@@ -152,9 +156,9 @@ export default function Game() {
 	)
 
 	const [gameOver, setGameOver] = useState(false)
-	const [tick, setTick] = useState(0)
-	const [explosions, setExplosions] = useState<Explosion[]>([])
-	const [pendingPowerups, setPendingPowerups] = useState<PowerupSpawn[]>([])
+	const [, setTick] = useState(0)
+	const [, setExplosions] = useState<Explosion[]>([])
+	const [, setPendingPowerups] = useState<PowerupSpawn[]>([])
 	const [showAlert, setShowAlert] = useState(false)
 
 	// Key state management
@@ -219,10 +223,15 @@ export default function Game() {
 				setPlayers((prev) => {
 					const upgrade =
 						targetCell === CELL_POWERUP_SPEED
-							? { speed: prev[player].speed + 0.5 }
+							? {
+									speed: prev[player].speed + 0.5,
+									baseSpeed: prev[player].baseSpeed + 0.5,
+							  }
 							: targetCell === CELL_POWERUP_RANGE
 							? { bombRange: prev[player].bombRange + 1 }
-							: { maxBombs: prev[player].maxBombs + 1 }
+							: targetCell === CELL_POWERUP_BOMB
+							? { maxBombs: prev[player].maxBombs + 1 }
+							: { hasOwl: true, speed: prev[player].baseSpeed * 2 }
 
 					return {
 						...prev,
@@ -373,22 +382,34 @@ export default function Game() {
 						playersRef.current.p1.y === ey &&
 						playersRef.current.p1.alive
 					) {
-						newPlayers.p1.alive = false
-						if (player === "p2") {
-							newPlayers.p2.kills++
+						if (newPlayers.p1.hasOwl) {
+							// Remove owl and its speed boost
+							newPlayers.p1.hasOwl = false
+							newPlayers.p1.speed = newPlayers.p1.baseSpeed
+						} else {
+							newPlayers.p1.alive = false
+							if (player === "p2") {
+								newPlayers.p2.kills++
+							}
+							someoneKilled = true
 						}
-						someoneKilled = true
 					}
 					if (
 						playersRef.current.p2.x === ex &&
 						playersRef.current.p2.y === ey &&
 						playersRef.current.p2.alive
 					) {
-						newPlayers.p2.alive = false
-						if (player === "p1") {
-							newPlayers.p1.kills++
+						if (newPlayers.p2.hasOwl) {
+							// Remove owl and its speed boost
+							newPlayers.p2.hasOwl = false
+							newPlayers.p2.speed = newPlayers.p2.baseSpeed
+						} else {
+							newPlayers.p2.alive = false
+							if (player === "p1") {
+								newPlayers.p1.kills++
+							}
+							someoneKilled = true
 						}
-						someoneKilled = true
 					}
 				})
 
@@ -488,8 +509,7 @@ export default function Game() {
 						const newGrid = [...grid]
 						readyToSpawn.forEach(({ x, y }) => {
 							if (newGrid[y][x] === CELL_EMPTY) {
-								newGrid[y][x] =
-									POWERUPS[Math.floor(Math.random() * POWERUPS.length)]
+								newGrid[y][x] = getRandomPowerup()
 							}
 						})
 						return newGrid
@@ -542,9 +562,11 @@ export default function Game() {
 				maxBombs: INITIAL_BOMBS_MAX,
 				bombRange: INITIAL_BOMB_RANGE,
 				speed: INITIAL_SPEED,
+				baseSpeed: INITIAL_SPEED,
 				alive: true,
 				lastMove: 0,
 				kills: players.p1.kills,
+				hasOwl: false,
 			},
 			p2: {
 				x: GRID_SIZE - 2,
@@ -553,9 +575,11 @@ export default function Game() {
 				maxBombs: INITIAL_BOMBS_MAX,
 				bombRange: INITIAL_BOMB_RANGE,
 				speed: INITIAL_SPEED,
+				baseSpeed: INITIAL_SPEED,
 				alive: true,
 				lastMove: 0,
 				kills: players.p2.kills,
+				hasOwl: false,
 			},
 		}))
 		setGameOver(false)
@@ -576,8 +600,7 @@ export default function Game() {
 					const newGrid = [...prev]
 					console.log(newGrid[y][x])
 					if (newGrid[y][x] === CELL_EMPTY) {
-						newGrid[y][x] =
-							POWERUPS[Math.floor(Math.random() * POWERUPS.length)]
+						newGrid[y][x] = getRandomPowerup()
 					}
 					return newGrid
 				})
@@ -609,17 +632,7 @@ export default function Game() {
 			</div>
 
 			<div className="flex justify-center">
-				<GameGrid
-					grid={grid}
-					players={players}
-					CELL_WALL={CELL_WALL}
-					CELL_EMPTY={CELL_EMPTY}
-					CELL_BOMB={CELL_BOMB}
-					CELL_EXPLOSION={CELL_EXPLOSION}
-					PLAYER_1={PLAYER_1}
-					PLAYER_2={PLAYER_2}
-					PLAYER_DEAD={PLAYER_DEAD}
-				/>
+				<GameGrid grid={grid} players={players} />
 			</div>
 
 			{gameOver && (
@@ -628,8 +641,6 @@ export default function Game() {
 					p1Alive={players.p1.alive}
 					p2Alive={players.p2.alive}
 					onReset={resetGame}
-					PLAYER_1={PLAYER_1}
-					PLAYER_2={PLAYER_2}
 				/>
 			)}
 		</div>
@@ -644,12 +655,19 @@ type PlayerStatsProps = {
 	speed: number
 	bombRange: number
 	kills: number
+	hasOwl: boolean
 }
 
-function PlayerStats({ speed, bombRange, kills }: PlayerStatsProps) {
-	return `Speed: ${speed.toFixed(
-		1
-	)}x | Bomb Range: ${bombRange}x1 | Kills: ${kills}`
+function PlayerStats({ speed, bombRange, kills, hasOwl }: PlayerStatsProps) {
+	return (
+		<>
+			Speed:{" "}
+			<span className={hasOwl ? "text-amber-700 font-semibold" : ""}>
+				{speed.toFixed(1)}x
+			</span>{" "}
+			| Bomb Range: {bombRange}x1 | Kills: {kills}
+		</>
+	)
 }
 
 type GameGridProps = {
@@ -658,88 +676,114 @@ type GameGridProps = {
 		p1: Player
 		p2: Player
 	}
-	CELL_WALL: string
-	CELL_EMPTY: string
-	CELL_BOMB: string
-	CELL_EXPLOSION: string
-	PLAYER_1: string
-	PLAYER_2: string
-	PLAYER_DEAD: string
 }
 
-function GameGrid({
-	grid,
-	players,
-	CELL_WALL,
-	CELL_EMPTY,
-	CELL_BOMB,
-	CELL_EXPLOSION,
-	PLAYER_1,
-	PLAYER_2,
-	PLAYER_DEAD,
-}: GameGridProps) {
+function GameGrid({ grid, players }: GameGridProps) {
 	return (
 		<div className="grid grid-cols-1 gap-0 bg-secondary p-4 rounded-lg overflow-auto max-h-[80vh]">
 			{grid.map((row, y) => (
 				<div key={y} className="flex">
 					{row.map((cell, x) => (
-						<div
+						<GameCell
 							key={`${x}-${y}`}
-							className="w-8 h-8 flex items-center justify-center relative"
-						>
-							<div className="absolute inset-0 flex items-center justify-center text-3xl">
-								{cell === CELL_WALL ? CELL_WALL : CELL_EMPTY}
-							</div>
-							{cell === CELL_BOMB && (
-								<div
-									className="absolute text-3xl z-0 transition-all duration-75"
-									style={{
-										filter: (() => {
-											const bomb = [
-												...players.p1.bombs,
-												...players.p2.bombs,
-											].find((b) => b.x === x && b.y === y)
-											if (!bomb) return "none"
-											const elapsed = (Date.now() - bomb.startTime) / 1000
-											const progress = Math.min(elapsed / 2, 1)
-											return `
+							cell={cell}
+							x={x}
+							y={y}
+							players={players}
+						/>
+					))}
+				</div>
+			))}
+		</div>
+	)
+}
+
+const getRandomPowerup = () => {
+	const rand = Math.random()
+	if (rand < 0.1) {
+		// 10% chance for owl
+		return CELL_POWERUP_OWL
+	}
+	// Distribute remaining 90% among other powerups
+	const otherPowerups = [
+		CELL_POWERUP_SPEED,
+		CELL_POWERUP_RANGE,
+		CELL_POWERUP_BOMB,
+	]
+	return otherPowerups[Math.floor(Math.random() * otherPowerups.length)]
+}
+type GameCellProps = {
+	cell: string
+	x: number
+	y: number
+	players: {
+		p1: {
+			x: number
+			y: number
+			alive: boolean
+			hasOwl: boolean
+		}
+		p2: {
+			x: number
+			y: number
+			alive: boolean
+			hasOwl: boolean
+		}
+	}
+}
+
+export function GameCell({ cell, x, y, players }: GameCellProps) {
+	return (
+		<div
+			key={`${x}-${y}`}
+			className="w-8 h-8 flex items-center justify-center relative"
+		>
+			<div className="absolute inset-0 flex items-center justify-center text-3xl">
+				{cell === CELL_WALL ? CELL_WALL : CELL_EMPTY}
+			</div>
+			{cell === CELL_BOMB && (
+				<div
+					className="absolute text-3xl z-0 transition-all duration-75"
+					style={{
+						filter: (() => {
+							const bomb = [...players.p1.bombs, ...players.p2.bombs].find(
+								(b) => b.x === x && b.y === y
+							)
+							if (!bomb) return "none"
+							const elapsed = (Date.now() - bomb.startTime) / 1000
+							const progress = Math.min(elapsed / 2, 1)
+							return `
 												sepia(${progress * 100}%)
 												saturate(${100 + progress * 700}%)
 												hue-rotate(${-progress * 130}deg)
 												brightness(${100 + progress * 150}%)
 											`
-										})(),
-									}}
-								>
-									💣
-								</div>
-							)}
-							<div
-								className={cn(
-									"z-10 absolute transition-all duration-150",
-									cell === CELL_EXPLOSION
-										? "text-3xl opacity-100 scale-110"
-										: "text-2xl opacity-100 scale-100"
-								)}
-							>
-								{players.p1.x === x && players.p1.y === y
-									? players.p1.alive
-										? PLAYER_1
-										: PLAYER_DEAD
-									: players.p2.x === x && players.p2.y === y
-									? players.p2.alive
-										? PLAYER_2
-										: PLAYER_DEAD
-									: cell !== CELL_BOMB &&
-									  cell !== CELL_WALL &&
-									  cell !== CELL_EMPTY
-									? cell
-									: null}
-							</div>
-						</div>
-					))}
+						})(),
+					}}
+				>
+					💣
 				</div>
-			))}
+			)}
+			<div
+				className={cn(
+					"z-10 absolute transition-all duration-150",
+					cell === CELL_EXPLOSION
+						? "text-3xl opacity-100 scale-110"
+						: "text-2xl opacity-100 scale-100"
+				)}
+			>
+				{players.p1.x === x && players.p1.y === y
+					? players.p1.alive
+						? PLAYER_1
+						: PLAYER_DEAD
+					: players.p2.x === x && players.p2.y === y
+					? players.p2.alive
+						? PLAYER_2
+						: PLAYER_DEAD
+					: cell !== CELL_BOMB && cell !== CELL_WALL && cell !== CELL_EMPTY
+					? cell
+					: null}
+			</div>
 		</div>
 	)
 }
