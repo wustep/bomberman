@@ -34,6 +34,8 @@ import {
 	INVULNERABILITY_DURATION,
 } from "./constants"
 
+import { DEBUG, DEBUG_STARTING_PETS, DEBUG_STARTING_POWERUPS } from "./debug"
+
 type KeyState = {
 	[key: string]: boolean
 }
@@ -658,14 +660,18 @@ export default function Game() {
 				x: 1,
 				y: 1,
 				bombs: [],
-				maxBombs: INITIAL_BOMBS_MAX,
-				bombRange: INITIAL_BOMB_RANGE,
-				speed: INITIAL_SPEED,
+				maxBombs: DEBUG
+					? DEBUG_STARTING_POWERUPS.P1.maxBombs
+					: INITIAL_BOMBS_MAX,
+				bombRange: DEBUG
+					? DEBUG_STARTING_POWERUPS.P1.bombRange
+					: INITIAL_BOMB_RANGE,
+				speed: DEBUG ? DEBUG_STARTING_POWERUPS.P1.speed : INITIAL_SPEED,
 				alive: true,
 				lastMove: 0,
 				kills: players.p1.kills,
-				pet: null,
-				baseSpeed: INITIAL_SPEED,
+				pet: DEBUG ? DEBUG_STARTING_PETS.P1 : null,
+				baseSpeed: DEBUG ? DEBUG_STARTING_POWERUPS.P1.speed : INITIAL_SPEED,
 				orientation: "right",
 				invulnerableUntil: 0,
 			},
@@ -673,14 +679,18 @@ export default function Game() {
 				x: GRID_SIZE - 2,
 				y: GRID_SIZE - 2,
 				bombs: [],
-				maxBombs: INITIAL_BOMBS_MAX,
-				bombRange: INITIAL_BOMB_RANGE,
-				speed: INITIAL_SPEED,
+				maxBombs: DEBUG
+					? DEBUG_STARTING_POWERUPS.P2.maxBombs
+					: INITIAL_BOMBS_MAX,
+				bombRange: DEBUG
+					? DEBUG_STARTING_POWERUPS.P2.bombRange
+					: INITIAL_BOMB_RANGE,
+				speed: DEBUG ? DEBUG_STARTING_POWERUPS.P2.speed : INITIAL_SPEED,
 				alive: true,
 				lastMove: 0,
 				kills: players.p2.kills,
-				pet: null,
-				baseSpeed: INITIAL_SPEED,
+				pet: DEBUG ? DEBUG_STARTING_PETS.P2 : null,
+				baseSpeed: DEBUG ? DEBUG_STARTING_POWERUPS.P2.speed : INITIAL_SPEED,
 				orientation: "left",
 				invulnerableUntil: 0,
 			},
@@ -902,7 +912,7 @@ export function GameCell({ cell, x, y, players }: GameCellProps) {
 									(players.p1.orientation === "left" &&
 										players.p1.pet === CELL_POWERUP_OWL) ||
 										(players.p1.orientation === "right" &&
-											players.p2.pet === CELL_POWERUP_TURTLE)
+											players.p1.pet === CELL_POWERUP_TURTLE)
 										? "scale-x-[-1]"
 										: ""
 								)}
