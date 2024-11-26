@@ -211,6 +211,14 @@ export default function Game() {
 			const newX = Math.max(0, Math.min(GRID_SIZE - 1, x + dx))
 			const newY = Math.max(0, Math.min(GRID_SIZE - 1, y + dy))
 
+			// Collision handling
+			const otherPlayer = player === "p1" ? "p2" : "p1"
+			if (
+				playersRef.current[otherPlayer].x === newX &&
+				playersRef.current[otherPlayer].y === newY
+			)
+				return
+
 			const targetCell = gridRef.current[newY][newX]
 			if (
 				targetCell === CELL_WALL ||
