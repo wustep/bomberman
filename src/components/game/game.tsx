@@ -27,6 +27,30 @@ const PLAYER_1 = "😀"
 const PLAYER_2 = "😎"
 const PLAYER_DEAD = "💀"
 
+type KeyState = {
+	[key: string]: boolean
+}
+
+type Direction = {
+	key: string
+	dx: number
+	dy: number
+}
+
+const PLAYER_1_CONTROLS: Direction[] = [
+	{ key: "w", dx: 0, dy: -1 },
+	{ key: "s", dx: 0, dy: 1 },
+	{ key: "a", dx: -1, dy: 0 },
+	{ key: "d", dx: 1, dy: 0 },
+]
+
+const PLAYER_2_CONTROLS: Direction[] = [
+	{ key: "arrowup", dx: 0, dy: -1 },
+	{ key: "arrowdown", dx: 0, dy: 1 },
+	{ key: "arrowleft", dx: -1, dy: 0 },
+	{ key: "arrowright", dx: 1, dy: 0 },
+]
+
 type Player = {
 	x: number
 	y: number
@@ -48,6 +72,7 @@ type Bomb = {
 type PowerUp = "⚡️" | "💪" | "➕"
 
 export default function Game() {
+	const [keys, setKeys] = useState<KeyState>({})
 	const [grid, _setGrid] = useState<(string | PowerUp)[][]>(
 		Array(GRID_SIZE)
 			.fill(null)
@@ -68,10 +93,7 @@ export default function Game() {
 		[]
 	)
 
-	const [players, _setPlayers] = useState<{
-		p1: Player
-		p2: Player
-	}>({
+	const [players, _setPlayers] = useState<{ p1: Player; p2: Player }>({
 		p1: {
 			x: 1,
 			y: 1,
@@ -112,82 +134,62 @@ export default function Game() {
 
 	const [gameOver, setGameOver] = useState(false)
 
-	const resetGame = useCallback(() => {
-		const newGrid = Array(GRID_SIZE)
-			.fill(null)
-			.map(() => Array(GRID_SIZE).fill(CELL_EMPTY))
+	// Key state management
+	useEffect(() => {
+		const handleKeyDown = (e: KeyboardEvent) => {
+			const key = e.key.toLowerCase()
+			// Special handling for right shift
+			if (
+				e.key === "Shift" &&
+				e.location === KeyboardEvent.DOM_KEY_LOCATION_RIGHT
+			) {
+				setKeys((prev) => ({ ...prev, rightshift: true }))
+			} else {
+				setKeys((prev) => ({ ...prev, [key]: true }))
+			}
+			e.preventDefault()
+		}
 
-		for (let i = 0; i < GRID_SIZE; i++) {
-			for (let j = 0; j < GRID_SIZE; j++) {
-				if (i % 2 === 0 && j % 2 === 0) {
-					newGrid[i][j] = CELL_WALL
-				}
+		const handleKeyUp = (e: KeyboardEvent) => {
+			const key = e.key.toLowerCase()
+			// Special handling for right shift
+			if (
+				e.key === "Shift" &&
+				e.location === KeyboardEvent.DOM_KEY_LOCATION_RIGHT
+			) {
+				setKeys((prev) => ({ ...prev, rightshift: false }))
+			} else {
+				setKeys((prev) => ({ ...prev, [key]: false }))
 			}
 		}
 
-		newGrid[1][1] = CELL_EMPTY
-		newGrid[GRID_SIZE - 2][GRID_SIZE - 2] = CELL_EMPTY
+		window.addEventListener("keydown", handleKeyDown)
+		window.addEventListener("keyup", handleKeyUp)
 
-		setGrid(newGrid)
-		setPlayers({
-			p1: {
-				x: 1,
-				y: 1,
-				bombs: [],
-				maxBombs: INITIAL_BOMBS_MAX,
-				bombRange: INITIAL_BOMB_RANGE,
-				speed: INITIAL_SPEED,
-				alive: true,
-				lastMove: 0,
-			},
-			p2: {
-				x: GRID_SIZE - 2,
-				y: GRID_SIZE - 2,
-				bombs: [],
-				maxBombs: INITIAL_BOMBS_MAX,
-				bombRange: INITIAL_BOMB_RANGE,
-				speed: INITIAL_SPEED,
-				alive: true,
-				lastMove: 0,
-			},
-		})
-		setGameOver(false)
-	}, [setGrid, setPlayers])
-
-	useEffect(() => {
-		resetGame()
-	}, [resetGame])
+		return () => {
+			window.removeEventListener("keydown", handleKeyDown)
+			window.removeEventListener("keyup", handleKeyUp)
+		}
+	}, [])
 
 	const movePlayer = useCallback(
-		(player: "p1" | "p2", direction: string) => {
+		(player: "p1" | "p2", dx: number, dy: number) => {
 			const currentTime = Date.now()
-			if (!players[player].alive) return
+			if (!playersRef.current[player].alive) return
 
-			const moveDelay = 200 / players[player].speed
-			if (currentTime - players[player].lastMove < moveDelay) return
+			const moveDelay = 200 / playersRef.current[player].speed
+			if (currentTime - playersRef.current[player].lastMove < moveDelay) return
 
-			const { x, y } = players[player]
-			let newX = x
-			let newY = y
-
-			switch (direction) {
-				case "w":
-					newY = Math.max(0, y - 1)
-					break
-				case "s":
-					newY = Math.min(GRID_SIZE - 1, y + 1)
-					break
-				case "a":
-					newX = Math.max(0, x - 1)
-					break
-				case "d":
-					newX = Math.min(GRID_SIZE - 1, x + 1)
-					break
-			}
+			const { x, y } = playersRef.current[player]
+			const newX = Math.max(0, Math.min(GRID_SIZE - 1, x + dx))
+			const newY = Math.max(0, Math.min(GRID_SIZE - 1, y + dy))
 
 			// Collision handling
 			const otherPlayer = player === "p1" ? "p2" : "p1"
-			if (players[otherPlayer].x === newX && players[otherPlayer].y === newY)
+			if (
+				playersRef.current[otherPlayer].x === newX &&
+				playersRef.current[otherPlayer].y === newY
+			)
 				return
 
 			const targetCell = gridRef.current[newY][newX]
@@ -347,29 +349,78 @@ export default function Game() {
 		[setGrid, setPlayers, setGameOver]
 	)
 
+	// Game loop for continuous movement
 	useEffect(() => {
-		const handleKeyDown = (e: KeyboardEvent) => {
-			if (gameOver) return
-			e.preventDefault()
+		if (gameOver) return
 
-			// Player 1 controls (WASD + Q)
-			if (e.key.toLowerCase() === "w") movePlayer("p1", "w")
-			else if (e.key.toLowerCase() === "a") movePlayer("p1", "a")
-			else if (e.key.toLowerCase() === "s") movePlayer("p1", "s")
-			else if (e.key.toLowerCase() === "d") movePlayer("p1", "d")
-			else if (e.key.toLowerCase() === "q") placeBomb("p1")
+		const gameLoop = setInterval(() => {
+			// Handle Player 1 movement
+			PLAYER_1_CONTROLS.forEach((control) => {
+				if (keys[control.key]) {
+					movePlayer("p1", control.dx, control.dy)
+				}
+			})
 
-			// Player 2 controls (Arrows + Right Shift)
-			if (e.key === "ArrowUp") movePlayer("p2", "w")
-			else if (e.key === "ArrowLeft") movePlayer("p2", "a")
-			else if (e.key === "ArrowDown") movePlayer("p2", "s")
-			else if (e.key === "ArrowRight") movePlayer("p2", "d")
-			else if (e.key === "Shift" && e.location === 2) placeBomb("p2")
+			// Handle Player 2 movement
+			PLAYER_2_CONTROLS.forEach((control) => {
+				if (keys[control.key]) {
+					movePlayer("p2", control.dx, control.dy)
+				}
+			})
+
+			// Handle bomb placement
+			if (keys["q"]) placeBomb("p1")
+			if (keys["rightshift"]) placeBomb("p2")
+		}, 16) // 60fps target
+
+		return () => clearInterval(gameLoop)
+	}, [keys, gameOver, placeBomb, movePlayer])
+
+	const resetGame = useCallback(() => {
+		const newGrid = Array(GRID_SIZE)
+			.fill(null)
+			.map(() => Array(GRID_SIZE).fill(CELL_EMPTY))
+
+		for (let i = 0; i < GRID_SIZE; i++) {
+			for (let j = 0; j < GRID_SIZE; j++) {
+				if (i % 2 === 0 && j % 2 === 0) {
+					newGrid[i][j] = CELL_WALL
+				}
+			}
 		}
 
-		window.addEventListener("keydown", handleKeyDown)
-		return () => window.removeEventListener("keydown", handleKeyDown)
-	}, [gameOver, movePlayer, placeBomb])
+		newGrid[1][1] = CELL_EMPTY
+		newGrid[GRID_SIZE - 2][GRID_SIZE - 2] = CELL_EMPTY
+
+		setGrid(newGrid)
+		setPlayers({
+			p1: {
+				x: 1,
+				y: 1,
+				bombs: [],
+				maxBombs: INITIAL_BOMBS_MAX,
+				bombRange: INITIAL_BOMB_RANGE,
+				speed: INITIAL_SPEED,
+				alive: true,
+				lastMove: 0,
+			},
+			p2: {
+				x: GRID_SIZE - 2,
+				y: GRID_SIZE - 2,
+				bombs: [],
+				maxBombs: INITIAL_BOMBS_MAX,
+				bombRange: INITIAL_BOMB_RANGE,
+				speed: INITIAL_SPEED,
+				alive: true,
+				lastMove: 0,
+			},
+		})
+		setGameOver(false)
+	}, [setGrid, setPlayers])
+
+	useEffect(() => {
+		resetGame()
+	}, [resetGame])
 
 	// Spawn powerups
 	useEffect(() => {
