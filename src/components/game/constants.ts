@@ -13,11 +13,13 @@ export const CELL_POWERUP_SPEED = "⚡️"
 export const CELL_POWERUP_RANGE = "💪"
 export const CELL_POWERUP_BOMB = "➕"
 export const CELL_POWERUP_OWL = "🦉"
+export const CELL_POWERUP_TURTLE = "🐢"
 export const POWERUPS = [
 	CELL_POWERUP_SPEED,
 	CELL_POWERUP_RANGE,
 	CELL_POWERUP_BOMB,
 	CELL_POWERUP_OWL,
+	CELL_POWERUP_TURTLE,
 ]
 
 export const POWERUP_SPAWN_CHANCE = 0.2

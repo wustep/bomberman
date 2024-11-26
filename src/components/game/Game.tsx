@@ -19,6 +19,7 @@ import {
 	CELL_POWERUP_RANGE,
 	CELL_POWERUP_BOMB,
 	CELL_POWERUP_OWL,
+	CELL_POWERUP_TURTLE,
 	POWERUPS,
 	POWERUP_SPAWN_CHANCE,
 	POWERUP_SPAWN_INTERVAL,
@@ -64,7 +65,7 @@ type Player = {
 	alive: boolean
 	lastMove: number
 	kills: number
-	hasOwl: boolean
+	pet: typeof PET_OWL | typeof PET_TURTLE | null
 	baseSpeed: number
 }
 
@@ -76,7 +77,7 @@ type Bomb = {
 	startTime: number
 }
 
-type PowerUp = "⚡️" | "💪" | "➕" | "🦉"
+type PowerUp = "⚡️" | "💪" | "➕" | "🦉" | "🐢"
 
 type Explosion = {
 	coords: [number, number][]
@@ -119,11 +120,11 @@ export default function Game() {
 			maxBombs: INITIAL_BOMBS_MAX,
 			bombRange: INITIAL_BOMB_RANGE,
 			speed: INITIAL_SPEED,
-			baseSpeed: INITIAL_SPEED,
 			alive: true,
 			lastMove: 0,
 			kills: 0,
-			hasOwl: false,
+			pet: null,
+			baseSpeed: INITIAL_SPEED,
 		},
 		p2: {
 			x: GRID_SIZE - 2,
@@ -132,11 +133,11 @@ export default function Game() {
 			maxBombs: INITIAL_BOMBS_MAX,
 			bombRange: INITIAL_BOMB_RANGE,
 			speed: INITIAL_SPEED,
-			baseSpeed: INITIAL_SPEED,
 			alive: true,
 			lastMove: 0,
 			kills: 0,
-			hasOwl: false,
+			pet: null,
+			baseSpeed: INITIAL_SPEED,
 		},
 	})
 	const playersRef = useRef<{ p1: Player; p2: Player }>(players)
@@ -240,7 +241,12 @@ export default function Game() {
 							? { bombRange: prev[player].bombRange + 1 }
 							: targetCell === CELL_POWERUP_BOMB
 							? { maxBombs: prev[player].maxBombs + 1 }
-							: { hasOwl: true, speed: prev[player].baseSpeed * 2 }
+							: targetCell === CELL_POWERUP_OWL
+							? { pet: CELL_POWERUP_OWL, speed: prev[player].baseSpeed * 2 }
+							: {
+									pet: CELL_POWERUP_TURTLE,
+									speed: prev[player].baseSpeed * 0.5,
+							  }
 
 					return {
 						...prev,
@@ -391,9 +397,9 @@ export default function Game() {
 						playersRef.current.p1.y === ey &&
 						playersRef.current.p1.alive
 					) {
-						if (newPlayers.p1.hasOwl) {
-							// Remove owl and its speed boost
-							newPlayers.p1.hasOwl = false
+						if (newPlayers.p1.pet) {
+							// Remove pet and reset speed
+							newPlayers.p1.pet = null
 							newPlayers.p1.speed = newPlayers.p1.baseSpeed
 						} else {
 							newPlayers.p1.alive = false
@@ -408,9 +414,9 @@ export default function Game() {
 						playersRef.current.p2.y === ey &&
 						playersRef.current.p2.alive
 					) {
-						if (newPlayers.p2.hasOwl) {
-							// Remove owl and its speed boost
-							newPlayers.p2.hasOwl = false
+						if (newPlayers.p2.pet) {
+							// Remove pet and reset speed
+							newPlayers.p2.pet = null
 							newPlayers.p2.speed = newPlayers.p2.baseSpeed
 						} else {
 							newPlayers.p2.alive = false
@@ -571,11 +577,11 @@ export default function Game() {
 				maxBombs: INITIAL_BOMBS_MAX,
 				bombRange: INITIAL_BOMB_RANGE,
 				speed: INITIAL_SPEED,
-				baseSpeed: INITIAL_SPEED,
 				alive: true,
 				lastMove: 0,
 				kills: players.p1.kills,
-				hasOwl: false,
+				pet: null,
+				baseSpeed: INITIAL_SPEED,
 			},
 			p2: {
 				x: GRID_SIZE - 2,
@@ -584,11 +590,11 @@ export default function Game() {
 				maxBombs: INITIAL_BOMBS_MAX,
 				bombRange: INITIAL_BOMB_RANGE,
 				speed: INITIAL_SPEED,
-				baseSpeed: INITIAL_SPEED,
 				alive: true,
 				lastMove: 0,
 				kills: players.p2.kills,
-				hasOwl: false,
+				pet: null,
+				baseSpeed: INITIAL_SPEED,
 			},
 		}))
 		setGameOver(false)
@@ -596,7 +602,7 @@ export default function Game() {
 	}, [setGrid, setPlayers])
 
 	useEffect(() => {
-		resetGame()
+		// resetGame()
 	}, [resetGame])
 
 	// Spawn powerups
@@ -664,14 +670,22 @@ type PlayerStatsProps = {
 	speed: number
 	bombRange: number
 	kills: number
-	hasOwl: boolean
+	pet: typeof CELL_POWERUP_OWL | typeof CELL_POWERUP_TURTLE | null
 }
 
-function PlayerStats({ speed, bombRange, kills, hasOwl }: PlayerStatsProps) {
+function PlayerStats({ speed, bombRange, kills, pet }: PlayerStatsProps) {
 	return (
 		<>
 			Speed:{" "}
-			<span className={hasOwl ? "text-amber-700 font-semibold" : ""}>
+			<span
+				className={
+					pet === CELL_POWERUP_OWL
+						? "text-amber-700 font-semibold"
+						: pet === CELL_POWERUP_TURTLE
+						? "text-green-700 font-semibold"
+						: ""
+				}
+			>
 				{speed.toFixed(1)}x
 			</span>{" "}
 			| Bomb Range: {bombRange}x1 | Kills: {kills}
@@ -710,7 +724,8 @@ function GameGrid({ grid, players }: GameGridProps) {
 const getRandomPowerup = () => {
 	const rand = Math.random()
 	if (rand < POWERUP_SPAWN_PET_CHANCE) {
-		return CELL_POWERUP_OWL
+		// Equal chance for owl or turtle
+		return Math.random() < 0.5 ? CELL_POWERUP_OWL : CELL_POWERUP_TURTLE
 	}
 	// Distribute remaining 90% among other powerups
 	const otherPowerups = [
@@ -765,23 +780,43 @@ export function GameCell({ cell, x, y, players }: GameCellProps) {
 			)}
 			<div
 				className={cn(
-					"z-10 absolute transition-all duration-150",
+					"z-10 absolute transition-all",
 					cell === CELL_EXPLOSION
-						? "text-3xl opacity-100 scale-110"
-						: "text-2xl opacity-100 scale-100"
+						? "text-3xl animate-[explosion_256ms_ease-out_forwards]"
+						: "text-2xl"
 				)}
 			>
-				{players.p1.x === x && players.p1.y === y
-					? players.p1.alive
-						? PLAYER_1
-						: PLAYER_DEAD
-					: players.p2.x === x && players.p2.y === y
-					? players.p2.alive
-						? PLAYER_2
-						: PLAYER_DEAD
-					: cell !== CELL_BOMB && cell !== CELL_WALL && cell !== CELL_EMPTY
-					? cell
-					: null}
+				{players.p1.x === x && players.p1.y === y ? (
+					<div className="relative flex flex-col items-center">
+						<span
+							className={cn(
+								"relative z-0",
+								players.p1.pet ? "text-xl mb-[-1.3rem]" : ""
+							)}
+						>
+							{players.p1.alive ? PLAYER_1 : PLAYER_DEAD}
+						</span>
+						{players.p1.pet && (
+							<span className="text-2xl z-10 relative">{players.p1.pet}</span>
+						)}
+					</div>
+				) : players.p2.x === x && players.p2.y === y ? (
+					<div className="relative flex flex-col items-center">
+						<span
+							className={cn(
+								"relative z-0",
+								players.p2.pet ? "text-xl mb-[-1rem]" : ""
+							)}
+						>
+							{players.p2.alive ? PLAYER_2 : PLAYER_DEAD}
+						</span>
+						{players.p2.pet && (
+							<span className="text-2xl z-10 relative">{players.p2.pet}</span>
+						)}
+					</div>
+				) : cell !== CELL_BOMB && cell !== CELL_WALL && cell !== CELL_EMPTY ? (
+					cell
+				) : null}
 			</div>
 		</div>
 	)
