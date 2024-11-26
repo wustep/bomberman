@@ -350,27 +350,21 @@ export default function Game() {
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
 			if (gameOver) return
-
 			e.preventDefault()
-			const key = e.key.toLowerCase()
 
-			if (["w", "a", "s", "d"].includes(key)) {
-				movePlayer("p1", key)
-			} else if (e.key === "q") {
-				placeBomb("p1")
-			}
+			// Player 1 controls (WASD + Q)
+			if (e.key.toLowerCase() === "w") movePlayer("p1", "w")
+			else if (e.key.toLowerCase() === "a") movePlayer("p1", "a")
+			else if (e.key.toLowerCase() === "s") movePlayer("p1", "s")
+			else if (e.key.toLowerCase() === "d") movePlayer("p1", "d")
+			else if (e.key.toLowerCase() === "q") placeBomb("p1")
 
-			if (["arrowup", "arrowleft", "arrowdown", "arrowright"].includes(key)) {
-				const dirMap: Record<string, string> = {
-					arrowup: "w",
-					arrowleft: "a",
-					arrowdown: "s",
-					arrowright: "d",
-				}
-				movePlayer("p2", dirMap[key])
-			} else if (e.key === "Shift" && e.location === 2) {
-				placeBomb("p2")
-			}
+			// Player 2 controls (Arrows + Right Shift)
+			if (e.key === "ArrowUp") movePlayer("p2", "w")
+			else if (e.key === "ArrowLeft") movePlayer("p2", "a")
+			else if (e.key === "ArrowDown") movePlayer("p2", "s")
+			else if (e.key === "ArrowRight") movePlayer("p2", "d")
+			else if (e.key === "Shift" && e.location === 2) placeBomb("p2")
 		}
 
 		window.addEventListener("keydown", handleKeyDown)
