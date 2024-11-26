@@ -1,6 +1,5 @@
 import { cn } from "@/lib/utils"
-
-import type { Player } from "./types"
+import { Orientation, Player } from "./types"
 import {
 	CELL_WALL,
 	CELL_GRASS,
@@ -13,6 +12,8 @@ import {
 	PLAYER_DEAD,
 	PET_OWL,
 	PET_TURTLE,
+	PowerUp,
+	Pet,
 } from "./constants"
 
 type GameCellProps = {
@@ -28,122 +29,35 @@ type GameCellProps = {
 export function GameCell({ cell, x, y, players }: GameCellProps) {
 	const isP1Here = players.p1.x === x && players.p1.y === y
 	const isP2Here = players.p2.x === x && players.p2.y === y
-	const p1Invulnerable = Date.now() < players.p1.invulnerableUntil
-	const p2Invulnerable = Date.now() < players.p2.invulnerableUntil
 
 	return (
-		<div
-			key={`${x}-${y}`}
-			className="w-8 h-8 flex items-center justify-center relative"
-		>
-			<div
-				className={cn(
-					"absolute inset-0 flex items-center justify-center text-3xl"
-				)}
-			>
-				{cell === CELL_WALL
-					? CELL_WALL
-					: cell === CELL_GRASS
-					? CELL_GRASS
-					: CELL_EMPTY}
-			</div>
-			{cell === CELL_GRASS_BREAKING && (
-				<div
-					className={cn(
-						"absolute inset-0 flex items-center justify-center text-3xl",
-						cell === CELL_GRASS_BREAKING && "animate-grassBreak"
-					)}
-				>
-					{CELL_GRASS}
-				</div>
-			)}
-			{cell === CELL_BOMB && (
-				<div
-					className="absolute text-3xl z-0 transition-all duration-75"
-					style={{
-						filter: (() => {
-							const bomb = [...players.p1.bombs, ...players.p2.bombs].find(
-								(b) => b.x === x && b.y === y
-							)
-							if (!bomb) return "none"
-							const elapsed = (Date.now() - bomb.startTime) / 1000
-							const progress = Math.min(elapsed / 2, 1)
-							return `
-												sepia(${progress * 100}%)
-												saturate(${100 + progress * 700}%)
-												hue-rotate(${-progress * 130}deg)
-												brightness(${100 + progress * 150}%)
-											`
-						})(),
-					}}
-				>
-					💣
-				</div>
-			)}
+		<div className="w-8 h-8 flex items-center justify-center relative">
+			<BaseCell cell={cell} />
+			<Bomb players={players} x={x} y={y} />
 			<div
 				className={cn(
 					"z-10 absolute transition-all",
 					cell === CELL_EXPLOSION
 						? "text-3xl animate-[explosion_256ms_ease-out_forwards]"
-						: "text-2xl",
-					(isP1Here && p1Invulnerable) || (isP2Here && p2Invulnerable)
-						? "animate-[flash_400ms_ease-in-out_infinite]"
-						: ""
+						: "text-2xl"
 				)}
 			>
-				{players.p1.x === x && players.p1.y === y ? (
-					<div className={cn("relative flex flex-col items-center")}>
-						<span
-							className={cn(
-								"relative z-0",
-								players.p1.pet ? "text-xl mb-[-1rem]" : ""
-							)}
-						>
-							{players.p1.alive ? PLAYER_1 : PLAYER_DEAD}
-						</span>
-						{players.p1.pet && (
-							<span
-								className={cn(
-									"text-2xl z-10 relative",
-									// Owl faces right (🦉), turtle faces left (🐢)
-									(players.p1.orientation === "left" &&
-										players.p1.pet === PET_OWL) ||
-										(players.p1.orientation === "right" &&
-											players.p1.pet === PET_TURTLE)
-										? "scale-x-[-1]"
-										: ""
-								)}
-							>
-								{players.p1.pet}
-							</span>
-						)}
-					</div>
-				) : players.p2.x === x && players.p2.y === y ? (
-					<div className={cn("relative flex flex-col items-center")}>
-						<span
-							className={cn(
-								"relative z-0",
-								players.p2.pet ? "text-xl mb-[-1rem]" : ""
-							)}
-						>
-							{players.p2.alive ? PLAYER_2 : PLAYER_DEAD}
-						</span>
-						{players.p2.pet && (
-							<span
-								className={cn(
-									"text-2xl z-10 relative",
-									(players.p2.orientation === "left" &&
-										players.p2.pet === PET_OWL) ||
-										(players.p2.orientation === "right" &&
-											players.p2.pet === PET_TURTLE)
-										? "scale-x-[-1]"
-										: ""
-								)}
-							>
-								{players.p2.pet}
-							</span>
-						)}
-					</div>
+				{isP1Here && players.p1.x === x && players.p1.y === y ? (
+					<PlayerAvatar
+						player={PLAYER_1}
+						pet={players.p1.pet}
+						alive={players.p1.alive}
+						orientation={players.p1.orientation}
+						isInvulnerable={Date.now() < players.p1.invulnerableUntil}
+					/>
+				) : isP2Here && players.p2.x === x && players.p2.y === y ? (
+					<PlayerAvatar
+						player={PLAYER_2}
+						pet={players.p2.pet}
+						alive={players.p2.alive}
+						orientation={players.p2.orientation}
+						isInvulnerable={Date.now() < players.p2.invulnerableUntil}
+					/>
 				) : cell !== CELL_BOMB &&
 				  cell !== CELL_WALL &&
 				  cell !== CELL_EMPTY &&
@@ -154,4 +68,118 @@ export function GameCell({ cell, x, y, players }: GameCellProps) {
 			</div>
 		</div>
 	)
+}
+
+function BaseCell({ cell }: { cell: string }) {
+	if (cell === CELL_GRASS_BREAKING) {
+		return (
+			<div
+				className={cn(
+					"absolute inset-0 flex items-center justify-center text-3xl animate-grassBreak",
+					`z-[${zIndices.baseCell}]`
+				)}
+			>
+				{CELL_GRASS}
+			</div>
+		)
+	}
+
+	return (
+		<div className="absolute inset-0 flex items-center justify-center text-3xl">
+			{cell === CELL_WALL
+				? CELL_WALL
+				: cell === CELL_GRASS
+				? CELL_GRASS
+				: CELL_EMPTY}
+		</div>
+	)
+}
+
+function Bomb({
+	players,
+	x,
+	y,
+}: {
+	players: GameCellProps["players"]
+	x: number
+	y: number
+}) {
+	const bomb = [...players.p1.bombs, ...players.p2.bombs].find(
+		(b) => b.x === x && b.y === y
+	)
+	if (!bomb) return null
+
+	const elapsed = (Date.now() - bomb.startTime) / 1000
+	const progress = Math.min(elapsed / 2, 1)
+	const filter = `
+		sepia(${progress * 100}%)
+		saturate(${100 + progress * 700}%)
+		hue-rotate(${-progress * 130}deg)
+		brightness(${100 + progress * 150}%)
+	`
+
+	return (
+		<div
+			className={cn(
+				"absolute text-3xl transition-all duration-75",
+				`z-[${zIndices.bomb}]`
+			)}
+			style={{ filter }}
+		>
+			💣
+		</div>
+	)
+}
+
+function PlayerAvatar({
+	player,
+	pet,
+	alive,
+	orientation,
+	isInvulnerable,
+}: {
+	player: typeof PLAYER_1 | typeof PLAYER_2
+	pet: Pet | null
+	alive: boolean
+	orientation: Orientation
+	isInvulnerable: boolean
+}) {
+	return (
+		<div
+			className={cn(
+				"relative flex flex-col items-center",
+				isInvulnerable ? "animate-[flash_400ms_ease-in-out_infinite]" : ""
+			)}
+		>
+			<span
+				className={cn(
+					"relative",
+					`z-[${zIndices.player}]`,
+					pet ? "text-xl mb-[-1rem]" : ""
+				)}
+			>
+				{alive ? player : PLAYER_DEAD}
+			</span>
+			{pet && (
+				<span
+					className={cn(
+						"text-2xl z-10 relative",
+						// Owl faces right (🦉), turtle faces left (🐢)
+						(orientation === "left" && pet === PET_OWL) ||
+							(orientation === "right" && pet === PET_TURTLE)
+							? "scale-x-[-1]"
+							: ""
+					)}
+				>
+					{pet}
+				</span>
+			)}
+		</div>
+	)
+}
+
+const zIndices = {
+	baseCell: 0,
+	bomb: 1,
+	player: 2,
 }
