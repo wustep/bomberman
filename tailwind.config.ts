@@ -87,11 +87,11 @@ export default {
 					"100%": { transform: "scale(0.2)", opacity: "0.4" },
 				},
 			},
-			// TODO: These animations should correspond to the game constants,
-			// and they generally need some more tuning.
 			animation: {
-				flash: "flash 400ms ease-in-out infinite",
-				explosion: "explosion 600ms cubic-bezier(0.4, 0, 0.2, 1) forwards",
+				// Keep in sync with game constant. [#invulnerability-duration]
+				invulnerability: "invulnerability 1500ms ease-in-out infinite",
+				// Keep in sync with game constant. [#explosion-duration]
+				explosion: "explosion 500ms cubic-bezier(0.4, 0, 0.2, 1) forwards",
 				grassBreak: "grassBreak 200ms ease-out forwards",
 			},
 		},

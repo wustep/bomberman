@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils"
-import { Orientation, Pet, Player } from "./types"
+import { Orientation, Pet, Player, Bomb } from "./types"
 import {
 	CELL_WALL,
 	CELL_GRASS,
@@ -11,6 +11,9 @@ import {
 	PLAYER_2,
 	PLAYER_DEAD,
 	POWERUPS,
+	EXPLOSION_DURATION,
+	BOMB_DELAY_DURATION,
+	INVULNERABILITY_DURATION,
 } from "./constants"
 
 type GameCellProps = {
@@ -26,20 +29,20 @@ type GameCellProps = {
 export function GameCell({ cell, x, y, players }: GameCellProps) {
 	const isP1Here = players.p1.x === x && players.p1.y === y
 	const isP2Here = players.p2.x === x && players.p2.y === y
-
+	const bomb = [...players.p1.bombs, ...players.p2.bombs].find(
+		(b) => b.x === x && b.y === y
+	)
 	return (
 		<div className="w-8 h-8 flex items-center justify-center relative">
 			<BaseCell cell={cell} />
-			<Bomb players={players} x={x} y={y} />
+			{bomb && <BombCell bomb={bomb} />}
 			<div
 				className={cn(
 					"z-10 absolute transition-all",
-					cell === CELL_EXPLOSION
-						? "text-3xl animate-[explosion_256ms_ease-out_forwards]"
-						: "text-2xl"
+					cell === CELL_EXPLOSION ? "text-3xl animate-explosion" : "text-2xl"
 				)}
 			>
-				{isP1Here && players.p1.x === x && players.p1.y === y ? (
+				{isP1Here ? (
 					<PlayerAvatar
 						player={PLAYER_1}
 						pet={players.p1.pet}
@@ -47,7 +50,7 @@ export function GameCell({ cell, x, y, players }: GameCellProps) {
 						orientation={players.p1.orientation}
 						isInvulnerable={Date.now() < players.p1.invulnerableUntil}
 					/>
-				) : isP2Here && players.p2.x === x && players.p2.y === y ? (
+				) : isP2Here ? (
 					<PlayerAvatar
 						player={PLAYER_2}
 						pet={players.p2.pet}
@@ -55,15 +58,26 @@ export function GameCell({ cell, x, y, players }: GameCellProps) {
 						orientation={players.p2.orientation}
 						isInvulnerable={Date.now() < players.p2.invulnerableUntil}
 					/>
-				) : cell !== CELL_BOMB &&
-				  cell !== CELL_WALL &&
-				  cell !== CELL_EMPTY &&
-				  cell !== CELL_GRASS &&
-				  cell !== CELL_GRASS_BREAKING ? (
+				) : !isBaseCell(cell) && cell !== CELL_BOMB ? (
 					cell
 				) : null}
 			</div>
 		</div>
+	)
+}
+
+type BaseCell =
+	| typeof CELL_WALL
+	| typeof CELL_GRASS
+	| typeof CELL_EMPTY
+	| typeof CELL_GRASS_BREAKING
+
+function isBaseCell(cell: string): cell is BaseCell {
+	return (
+		cell === CELL_WALL ||
+		cell === CELL_GRASS ||
+		cell === CELL_EMPTY ||
+		cell === CELL_GRASS_BREAKING
 	)
 }
 
@@ -107,36 +121,23 @@ function BaseCell({ cell }: { cell: string }) {
 	)
 }
 
-function Bomb({
-	players,
-	x,
-	y,
-}: {
-	players: GameCellProps["players"]
-	x: number
-	y: number
-}) {
-	const bomb = [...players.p1.bombs, ...players.p2.bombs].find(
-		(b) => b.x === x && b.y === y
-	)
-	if (!bomb) return null
-
-	const elapsed = (Date.now() - bomb.startTime) / 1000
-	const progress = Math.min(elapsed / 2, 1)
-	const filter = `
-		sepia(${progress * 100}%)
-		saturate(${100 + progress * 700}%)
-		hue-rotate(${-progress * 130}deg)
-		brightness(${100 + progress * 150}%)
-	`
-
+function BombCell({ bomb }: { bomb: Bomb }) {
+	const elapsed = (Date.now() - bomb.startTime) / BOMB_DELAY_DURATION
+	const progress = Math.min(elapsed, 1)
 	return (
 		<div
 			className={cn(
-				"absolute text-3xl transition-all duration-75",
+				`absolute text-3xl transition-all duration-[${BOMB_DELAY_DURATION}]`,
 				`z-[${zIndices.bomb}]`
 			)}
-			style={{ filter }}
+			style={{
+				filter: `
+					sepia(${progress * 90}%)
+					saturate(${90 + progress * 700}%)
+					hue-rotate(${-progress * 120}deg)
+					brightness(${90 + progress * 150}%)
+				`,
+			}}
 		>
 			💣
 		</div>
@@ -168,7 +169,7 @@ function PlayerAvatar({
 		<div
 			className={cn(
 				"relative flex flex-col items-center",
-				isInvulnerable ? "animate-[flash_400ms_ease-in-out_infinite]" : ""
+				isInvulnerable ? "animate-invulnerability" : ""
 			)}
 		>
 			<span

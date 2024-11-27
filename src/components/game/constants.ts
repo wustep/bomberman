@@ -110,11 +110,13 @@ export const PLAYER_DEAD = "💀"
 export const BOMB_DELAY_DURATION = 2000
 /**
  * Duration of an explosion in ms.
+ * Keep in sync with tailwind animation duration. [#explosion-duration]
  */
 export const EXPLOSION_DURATION = 500
 
 /**
  * Duration of vulnerability after pet dies in ms.
+ * Keep in sync with tailwind animation duration. [#invulnerability-duration]
  */
 export const INVULNERABILITY_DURATION = 1500
 
