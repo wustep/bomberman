@@ -69,16 +69,25 @@ export function GameCell({ cell, x, y, players }: GameCellProps) {
 
 function BaseCell({ cell }: { cell: string }) {
 	if (cell === CELL_GRASS_BREAKING) {
-		// TODO make sure wall shows too!
 		return (
-			<div
-				className={cn(
-					"absolute inset-0 flex items-center justify-center text-3xl animate-grassBreak",
-					`z-[${zIndices.baseCell}]`
-				)}
-			>
-				{CELL_GRASS}
-			</div>
+			<>
+				<div
+					className={cn(
+						"absolute inset-0 flex items-center justify-center text-3xl",
+						`z-[${zIndices.baseCell}]`
+					)}
+				>
+					{CELL_EMPTY}
+				</div>
+				<div
+					className={cn(
+						"absolute inset-0 flex items-center justify-center text-3xl animate-grassBreak",
+						`z-[${zIndices.breakingGlass}]`
+					)}
+				>
+					{CELL_GRASS}
+				</div>
+			</>
 		)
 	}
 
@@ -186,9 +195,13 @@ function PlayerAvatar({
 	)
 }
 
+/**
+ * z-index values for the game cells, for when multiple objects are on top of each other.
+ */
 const zIndices = {
 	baseCell: 0,
-	bomb: 1,
-	player: 2,
-	pet: 3,
+	breakingGlass: 1,
+	bomb: 2,
+	player: 3,
+	pet: 4,
 }
