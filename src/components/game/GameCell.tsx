@@ -11,9 +11,7 @@ import {
 	PLAYER_2,
 	PLAYER_DEAD,
 	POWERUPS,
-	EXPLOSION_DURATION,
 	BOMB_DELAY_DURATION,
-	INVULNERABILITY_DURATION,
 } from "./constants"
 
 type GameCellProps = {
