@@ -33,6 +33,7 @@ import {
 	CELL_GRASS_BREAKING,
 	getPowerUpFromEmoji,
 	POWERUP_EMOJIS,
+	GRASS_BREAK_DURATION,
 } from "./constants"
 
 import { DEBUG, DEBUG_STARTING_PETS, DEBUG_STARTING_POWERUPS } from "./debug"
@@ -408,7 +409,7 @@ export default function Game() {
 										}
 										return newGrid
 									})
-								}, 200) // Match this with animation duration
+								}, GRASS_BREAK_DURATION) // Match this with animation duration
 								break // Stop the explosion in this direction
 							}
 

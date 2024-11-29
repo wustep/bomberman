@@ -92,6 +92,7 @@ export default {
 				invulnerability: "invulnerability 1500ms ease-in-out infinite",
 				// Keep in sync with game constant. [#explosion-duration]
 				explosion: "explosion 500ms cubic-bezier(0.4, 0, 0.2, 1) forwards",
+				// Keep in sync with game constant. [#grass-break-duration]
 				grassBreak: "grassBreak 200ms ease-out forwards",
 			},
 		},

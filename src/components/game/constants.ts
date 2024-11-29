@@ -121,6 +121,12 @@ export const EXPLOSION_DURATION = 500
 export const INVULNERABILITY_DURATION = 1500
 
 /**
+ * Duration of grass breaking animation in ms.
+ * Keep in sync with tailwind animation duration. [#grass-break-duration]
+ */
+export const GRASS_BREAK_DURATION = 200
+
+/**
  * Duration of time before an explosion triggers another explosion in ms.
  */
 export const CHAIN_EXPLOSION_DELAY = 50
