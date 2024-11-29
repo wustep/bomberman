@@ -330,9 +330,8 @@ export default function Game() {
 			})
 
 			const explodeBomb = (player: "p1" | "p2", bomb: Bomb) => {
-				if (gameOver) return
-
-				// Bomb was already triggered, likely by a chain reaction
+				// Bomb was already triggered or was deleted,
+				// either by a chain reaction or game reset.
 				if (
 					!Object.values(playersRef.current).some((p) =>
 						p.bombs.find((b) => b === bomb)
