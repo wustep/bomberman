@@ -11,6 +11,27 @@ export const CELL_EXPLOSION = "🌸"
 export const CELL_BOMB = "💣"
 export const CELL_GRASS = "🟩"
 
+export const PETS: Record<string, Pet> = {
+	OWL: {
+		type: "pet",
+		emoji: "🦉" as const,
+		name: "Speed Owl",
+		effect: () => ({
+			pet: PETS.OWL,
+			speed: 2,
+		}),
+	},
+	TURTLE: {
+		type: "pet",
+		emoji: "🐢" as const,
+		name: "Armored Turtle",
+		effect: () => ({
+			pet: PETS.TURTLE,
+			speed: 0.8,
+		}),
+	},
+}
+
 export const POWERUPS: Record<string, PowerUp> = {
 	SPEED: {
 		type: "buff",
@@ -37,33 +58,15 @@ export const POWERUPS: Record<string, PowerUp> = {
 			maxBombs: player.maxBombs + 1,
 		}),
 	},
-	OWL: {
-		type: "pet",
-		emoji: "🦉" as const,
-		name: "Speed Owl",
-		effect: () => ({
-			pet: POWERUPS.OWL,
-			speed: 2,
-		}),
-	} as Pet,
-	TURTLE: {
-		type: "pet",
-		emoji: "🐢" as const,
-		name: "Armored Turtle",
-		effect: () => ({
-			pet: POWERUPS.TURTLE,
-			speed: 0.8,
-		}),
-	} as Pet,
+	OWL: PETS.OWL,
+	TURTLE: PETS.TURTLE,
 }
 
-// Helper functions
 export const POWERUP_EMOJIS = Object.values(POWERUPS).map((p) => p.emoji)
 type PowerUpEmoji = (typeof POWERUP_EMOJIS)[number]
 export const isPowerUp = (cell: string): cell is PowerUpEmoji =>
 	POWERUP_EMOJIS.includes(cell as PowerUpEmoji)
 
-// Constants derived from POWERPS
 export const CELL_POWERUP_SPEED = POWERUPS.SPEED.emoji
 export const CELL_POWERUP_RANGE = POWERUPS.RANGE.emoji
 export const CELL_POWERUP_BOMB = POWERUPS.BOMB.emoji
@@ -75,15 +78,15 @@ export const CELL_POWERUP_TURTLE = POWERUPS.TURTLE.emoji
  */
 export const CELL_GRASS_BREAKING = "❎"
 
-// Spawn chances
-export const POWERUP_SPAWN_CHANCE = 0.2
-export const POWERUP_SPAWN_PET_CHANCE = 0.2
-
-// Helper to get powerup from emoji
+/**
+ * Returns the powerup associated with the given emoji.
+ */
 export const getPowerUpFromEmoji = (cell: string): PowerUp | undefined =>
 	Object.values(POWERUPS).find((p) => p.emoji === cell)
 
-// Helper to get random powerup
+/**
+ * Randomly selects a powerup or pet to spawn.
+ */
 export const getRandomPowerup = () => {
 	const rand = Math.random()
 	if (rand < POWERUP_SPAWN_PET_CHANCE) {
@@ -99,8 +102,28 @@ export const getRandomPowerup = () => {
 	return otherPowerups[Math.floor(Math.random() * otherPowerups.length)]
 }
 
+/**
+ * Interval between attempting a randomized powerup spawn.
+ */
 export const POWERUP_SPAWN_INTERVAL = 10000
-export const POWERUP_SPAWN_GRASS_CHANCE = 0.45
+
+/**
+ * Chance of spawning a powerup every {@link POWERUP_SPAWN_INTERVAL}.
+ */
+export const POWERUP_SPAWN_CHANCE = 0.2
+
+/**
+ * Chance of spawning a pet on a grass cell after it breaks.
+ */
+export const POWERUP_SPAWN_PET_CHANCE = 0.2
+
+/**
+ * Chance of spawning a powerup on a grass cell after it breaks.
+ */
+export const POWERUP_SPAWN_GRASS_CHANCE = 0.5
+/**
+ * Chance of spawning grass on a cell.
+ */
 export const GRASS_SPAWN_CHANCE = 0.4
 
 export const PLAYER_1 = "😀"
