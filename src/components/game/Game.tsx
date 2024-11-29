@@ -29,11 +29,11 @@ import {
 	EXPLOSION_DURATION,
 	BOMB_DELAY_DURATION,
 	INVULNERABILITY_DURATION,
-	CHAIN_EXPLOSION_DELAY,
 	CELL_GRASS_BREAKING,
 	getPowerUpFromEmoji,
 	POWERUP_EMOJIS,
 	GRASS_BREAK_DURATION,
+	CHAIN_EXPLOSION_DELAY,
 } from "./constants"
 
 import { DEBUG, DEBUG_STARTING_PETS, DEBUG_STARTING_POWERUPS } from "./debug"
@@ -330,8 +330,17 @@ export default function Game() {
 			})
 
 			const explodeBomb = (player: "p1" | "p2", bomb: Bomb) => {
-				// Early return if game is already over
 				if (gameOver) return
+
+				// Bomb was already triggered, likely by a chain reaction
+				if (
+					!Object.values(playersRef.current).some((p) =>
+						p.bombs.find((b) => b === bomb)
+					)
+				) {
+					return
+				}
+
 				const currentTime = Date.now()
 
 				const { x, y, range } = bomb
