@@ -4,7 +4,6 @@ import {
 	CELL_WALL,
 	CELL_GRASS,
 	CELL_EMPTY,
-	CELL_BOMB,
 	CELL_GRASS_BREAKING,
 	CELL_EXPLOSION,
 	PLAYER_1,
@@ -12,6 +11,7 @@ import {
 	PLAYER_DEAD,
 	POWERUPS,
 	BOMB_DELAY_DURATION,
+	isPowerUp,
 } from "./constants"
 
 type GameCellProps = {
@@ -30,52 +30,50 @@ export function GameCell({ cell, x, y, players }: GameCellProps) {
 	const bomb = [...players.p1.bombs, ...players.p2.bombs].find(
 		(b) => b.x === x && b.y === y
 	)
+	const isExplosion = cell === CELL_EXPLOSION
+
 	return (
 		<div className="w-8 h-8 flex items-center justify-center relative">
 			<BaseCell cell={cell} />
 			{bomb && <BombCell bomb={bomb} />}
-			<div
-				className={cn(
-					"z-10 absolute transition-all",
-					cell === CELL_EXPLOSION ? "text-3xl animate-explosion" : "text-2xl"
-				)}
-			>
-				{isP1Here ? (
-					<PlayerAvatar
-						player={PLAYER_1}
-						pet={players.p1.pet}
-						alive={players.p1.alive}
-						orientation={players.p1.orientation}
-						isInvulnerable={Date.now() < players.p1.invulnerableUntil}
-					/>
-				) : isP2Here ? (
-					<PlayerAvatar
-						player={PLAYER_2}
-						pet={players.p2.pet}
-						alive={players.p2.alive}
-						orientation={players.p2.orientation}
-						isInvulnerable={Date.now() < players.p2.invulnerableUntil}
-					/>
-				) : !isBaseCell(cell) && cell !== CELL_BOMB ? (
-					cell
-				) : null}
-			</div>
+			{isExplosion && (
+				<div
+					className={cn(
+						"absolute transition-all text-3xl animate-explosion",
+						`z-[${zIndices.explosion}]`
+					)}
+				>
+					{cell}
+				</div>
+			)}
+			{isP1Here ? (
+				<PlayerAvatar
+					player={PLAYER_1}
+					pet={players.p1.pet}
+					alive={players.p1.alive}
+					orientation={players.p1.orientation}
+					isInvulnerable={Date.now() < players.p1.invulnerableUntil}
+				/>
+			) : isP2Here ? (
+				<PlayerAvatar
+					player={PLAYER_2}
+					pet={players.p2.pet}
+					alive={players.p2.alive}
+					orientation={players.p2.orientation}
+					isInvulnerable={Date.now() < players.p2.invulnerableUntil}
+				/>
+			) : null}
+			{isPowerUp(cell) && (
+				<div
+					className={cn(
+						"absolute transition-all text-2xl",
+						`z-[${zIndices.powerup}]`
+					)}
+				>
+					{cell}
+				</div>
+			)}
 		</div>
-	)
-}
-
-type BaseCell =
-	| typeof CELL_WALL
-	| typeof CELL_GRASS
-	| typeof CELL_EMPTY
-	| typeof CELL_GRASS_BREAKING
-
-function isBaseCell(cell: string): cell is BaseCell {
-	return (
-		cell === CELL_WALL ||
-		cell === CELL_GRASS ||
-		cell === CELL_EMPTY ||
-		cell === CELL_GRASS_BREAKING
 	)
 }
 
@@ -166,14 +164,14 @@ function PlayerAvatar({
 	return (
 		<div
 			className={cn(
-				"relative flex flex-col items-center",
+				"relative flex flex-col items-center text-2xl",
 				isInvulnerable ? "animate-invulnerability" : ""
 			)}
 		>
 			<span
 				className={cn(
 					"relative",
-					`z-[${zIndices.player}]`,
+					`z-[${alive ? zIndices.player : zIndices.deadPlayer}]`,
 					pet ? "text-xl mb-[-1rem]" : ""
 				)}
 			>
@@ -203,4 +201,7 @@ const zIndices = {
 	bomb: 2,
 	player: 3,
 	pet: 4,
+	powerup: 5,
+	explosion: 6,
+	deadPlayer: 7,
 }

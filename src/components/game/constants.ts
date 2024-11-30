@@ -130,24 +130,24 @@ export const PLAYER_1 = "😀"
 export const PLAYER_2 = "😎"
 export const PLAYER_DEAD = "💀"
 
-export const BOMB_DELAY_DURATION = 2000
+export const BOMB_DELAY_DURATION = 1800
 /**
  * Duration of an explosion in ms.
  * Keep in sync with tailwind animation duration. [#explosion-duration]
  */
-export const EXPLOSION_DURATION = 500
+export const EXPLOSION_DURATION = 400
 
 /**
  * Duration of vulnerability after pet dies in ms.
  * Keep in sync with tailwind animation duration. [#invulnerability-duration]
  */
-export const INVULNERABILITY_DURATION = 1500
+export const INVULNERABILITY_DURATION = 2000
 
 /**
  * Duration of grass breaking animation in ms.
  * Keep in sync with tailwind animation duration. [#grass-break-duration]
  */
-export const GRASS_BREAK_DURATION = 200
+export const GRASS_BREAK_DURATION = 250
 
 /**
  * Duration of time before an explosion triggers another explosion in ms.
