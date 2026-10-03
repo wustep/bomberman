@@ -13,9 +13,36 @@ const geistMono = localFont({
 	weight: "100 900",
 })
 
+const SITE_URL = "https://wustep-bomberman.vercel.app"
+const title = "Bomberman"
+const description =
+	"A two-player Bomberman clone with emojis, pets and power-ups. Inspired by Crazy Arcade."
+const image = {
+	url: `${SITE_URL}/og.png`,
+	width: 1200,
+	height: 630,
+	alt: "An emoji Bomberman board mid-game: one player drops a bomb while a blossom of explosions just misses the other, riding a turtle.",
+}
+
 export const metadata: Metadata = {
-	title: "Bomberman",
-	description: "Bomberman",
+	metadataBase: new URL(SITE_URL),
+	title,
+	description,
+	alternates: { canonical: SITE_URL },
+	openGraph: {
+		type: "website",
+		siteName: title,
+		title,
+		description,
+		url: SITE_URL,
+		images: [image],
+	},
+	twitter: {
+		card: "summary_large_image",
+		title,
+		description,
+		images: [image],
+	},
 }
 
 export default function RootLayout({
