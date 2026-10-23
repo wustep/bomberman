@@ -172,7 +172,7 @@ function PlayerAvatar({
 				className={cn(
 					"relative",
 					`z-[${alive ? zIndices.player : zIndices.deadPlayer}]`,
-					pet ? "text-xl mb-[-1rem]" : ""
+					pet ? "text-xl -mb-4" : ""
 				)}
 			>
 				{alive ? player : PLAYER_DEAD}

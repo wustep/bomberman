@@ -33,7 +33,7 @@ export default function GameOverAlert({
 	return (
 		<div
 			className={cn(
-				"absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 transition-opacity duration-500",
+				"absolute inset-0 bg-background/80 backdrop-blur-xs flex items-center justify-center z-50 transition-opacity duration-500",
 				showAlert ? "opacity-100" : "opacity-0 pointer-events-none"
 			)}
 		>
